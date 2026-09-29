@@ -1,6 +1,6 @@
 import "server-only";
 import { Type } from "@google/genai";
-import { findCandidateByFile, getCandidate, getRubric, insertCandidate, listCandidates, updateCandidate } from "./db";
+import { redactSecrets, findCandidateByFile, getCandidate, getRubric, insertCandidate, listCandidates, updateCandidate } from "./db";
 import { extractText, splitPersonalDetails } from "./extract";
 import { generateJson } from "./gemini";
 import { ROLES, ROLE_TITLE, roleScore, shortlistSize, type Candidate, type Criterion, type Role, type RoleScore } from "./types";
@@ -244,7 +244,7 @@ export async function refreshDrafts(role: Role, budgetMs = 45_000) {
       await updateCandidate(w.c.id, patch);
       done++;
     } catch (e) {
-      lastError = e instanceof Error ? e.message : String(e);
+      lastError = redactSecrets(e instanceof Error ? e.message : String(e));
       if (lastError.startsWith("RATE_LIMITED")) break;
     }
   }

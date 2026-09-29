@@ -5,11 +5,26 @@ import { RUBRIC_ROWS, SCHEMA_STATEMENTS } from "./schema";
 
 let client: NeonQueryFunction<false, false> | null = null;
 
+/**
+ * Accepts DATABASE_URL even when a whole .env block was pasted into it
+ * (quotes, extra lines, DATABASE_URL_UNPOOLED=…): uses the first postgres:// address.
+ */
+export function databaseUrl(): string | null {
+  const raw = process.env.DATABASE_URL ?? "";
+  const m = raw.match(/postgres(?:ql)?:\/\/[^\s"'`]+/);
+  return m ? m[0] : null;
+}
+
+/** Never show a connection string (it contains the database password) in any message. */
+export function redactSecrets(msg: string) {
+  return msg.replace(/postgres(?:ql)?:\/\/[^\s"'`]+/g, "[database address hidden]").replace(/npg_[A-Za-z0-9]+/g, "[hidden]");
+}
+
 /** Neon Postgres over HTTP (works in Vercel serverless functions). DATABASE_URL comes from `neon deploy` / Neon console. */
 export function sql() {
   if (client) return client;
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set - run `neon deploy` (writes .env) or copy it from the Neon console");
+  const url = databaseUrl();
+  if (!url) throw new Error("DATABASE_URL is missing or isn't a postgres:// address. Set it in Vercel → Settings → Environment Variables.");
   // Optional override, used only for local testing against a mock Neon HTTP endpoint.
   if (process.env.NEON_HTTP_ENDPOINT) neonConfig.fetchEndpoint = process.env.NEON_HTTP_ENDPOINT;
   client = neon(url);
