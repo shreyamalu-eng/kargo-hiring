@@ -5,7 +5,6 @@ type Active = "PM" | "SPM" | "upload" | "about";
 type Props = { app?: boolean; active: Active; counts?: { PM: number; SPM: number }; waiting?: { PM: number; SPM: number }; children: React.ReactNode; hideTopbar?: boolean };
 
 export default function Shell({ app, active, counts, waiting, children, hideTopbar }: Props) {
-  const lockOn = !!process.env.DASHBOARD_PASSWORD;
   return (
     <div className="shell">
       {/* Desktop: calm sidebar, everything one click away */}
@@ -25,7 +24,6 @@ export default function Shell({ app, active, counts, waiting, children, hideTopb
         <Link href="/about" className={`nav ${active === "about" ? "on" : ""}`}><I.Shield /> How it works</Link>
         <div className="side-foot">
           <a href="/api/export" className="nav"><I.Download /> Export decisions</a>
-          {lockOn && <a href="/api/logout" className="nav"><I.Lock /> Lock</a>}
         </div>
       </aside>
 
@@ -34,7 +32,6 @@ export default function Shell({ app, active, counts, waiting, children, hideTopb
           <div className="topbar">
             <Link href="/" className="brand"><span className="mark"><I.Logo size={18} /></span>Kargo Hiring</Link>
             <span className="spacer" />
-            {lockOn && <a href="/api/logout" className="btn icon quiet" aria-label="Lock"><I.Lock size={18} /></a>}
           </div>
         )}
         {children}
