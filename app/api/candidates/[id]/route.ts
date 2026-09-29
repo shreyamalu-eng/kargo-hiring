@@ -1,3 +1,4 @@
+import { redactSecrets } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { deleteCandidate, getCandidate, updateCandidate } from "@/lib/db";
 import { generateBrief, generateEmail, rankRole, scoreCandidate } from "@/lib/pipeline";
@@ -54,7 +55,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
     return NextResponse.json(await getCandidate(id));
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = redactSecrets(e instanceof Error ? e.message : String(e));
     return NextResponse.json({ error: msg }, { status: msg.startsWith("RATE_LIMITED") ? 429 : 400 });
   }
 }
@@ -64,7 +65,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   try {
     await deleteCandidate(id);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 400 });
+    return NextResponse.json({ error: redactSecrets(e instanceof Error ? e.message : String(e)) }, { status: 400 });
   }
   return NextResponse.json({ ok: true });
 }
