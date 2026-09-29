@@ -1,5 +1,5 @@
 import "server-only";
-import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
+import { neon, neonConfig, type NeonQueryFunction } from "@neondatabase/serverless";
 import type { Candidate, Criterion, Role } from "./types";
 import { RUBRIC_ROWS, SCHEMA_STATEMENTS } from "./schema";
 
@@ -10,6 +10,8 @@ export function sql() {
   if (client) return client;
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set - run `neon deploy` (writes .env) or copy it from the Neon console");
+  // Optional override, used only for local testing against a mock Neon HTTP endpoint.
+  if (process.env.NEON_HTTP_ENDPOINT) neonConfig.fetchEndpoint = process.env.NEON_HTTP_ENDPOINT;
   client = neon(url);
   return client;
 }

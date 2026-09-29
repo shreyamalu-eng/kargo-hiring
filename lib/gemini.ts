@@ -5,7 +5,11 @@ let ai: GoogleGenAI | null = null;
 function client() {
   if (ai) return ai;
   if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set");
-  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    // Optional override, used only for local testing against a mock server.
+    ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}),
+  });
   return ai;
 }
 
