@@ -1,0 +1,38 @@
+// Minimal line icons (24px grid, 1.8 stroke) so the app has one consistent icon voice.
+type P = { size?: number; className?: string };
+const base = (size = 20) => ({
+  width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor",
+  strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true,
+});
+
+export const I = {
+  Users: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" /><circle cx="10" cy="8" r="3.5" /><path d="M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.6a3.5 3.5 0 0 1 0 6.8" /></svg>),
+  Star: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>),
+  Upload: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5" /><path d="M4 15v2.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V15" /></svg>),
+  Plus: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M12 5v14M5 12h14" /></svg>),
+  Shield: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M12 3.5 5 6v5.5c0 4.3 3 7.6 7 9 4-1.4 7-4.7 7-9V6z" /><path d="m9 12 2 2 4-4" /></svg>),
+  Send: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M20.5 3.5 10 14M20.5 3.5 14 20.5l-4-6.5-6.5-4z" /></svg>),
+  Check: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>),
+  CheckCircle: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="12" cy="12" r="9" /><path d="m8 12.3 2.8 2.7L16 9.5" /></svg>),
+  X: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M6 6l12 12M18 6 6 18" /></svg>),
+  Mail: ({ size, className }: P) => (<svg {...base(size)} className={className}><rect x="3.5" y="5.5" width="17" height="13" rx="3" /><path d="m4.5 7.5 7.5 5.5 7.5-5.5" /></svg>),
+  Calendar: ({ size, className }: P) => (<svg {...base(size)} className={className}><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>),
+  Sparkle: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M12 3.5c.6 3.9 2.6 5.9 6.5 6.5-3.9.6-5.9 2.6-6.5 6.5-.6-3.9-2.6-5.9-6.5-6.5 3.9-.6 5.9-2.6 6.5-6.5z" /><path d="M18.5 16.5c.2 1.3.9 2 2.2 2.2-1.3.2-2 .9-2.2 2.2-.2-1.3-.9-2-2.2-2.2 1.3-.2 2-.9 2.2-2.2z" /></svg>),
+  Search: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>),
+  ArrowLeft: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M19 12H5M11 6l-6 6 6 6" /></svg>),
+  ArrowRight: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M5 12h14M13 6l6 6-6 6" /></svg>),
+  ChevronLeft: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="m15 6-6 6 6 6" /></svg>),
+  ChevronRight: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="m9 6 6 6-6 6" /></svg>),
+  File: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z" /><path d="M14 3.5V8h4.5M9 13h6M9 16.5h4" /></svg>),
+  Alert: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5M12 16h.01" /></svg>),
+  Refresh: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M20 11a8 8 0 0 0-14.3-4.3L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.3L20 15.5M20 20v-4.5h-4.5" /></svg>),
+  Download: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5" /><path d="M4 16v1.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V16" /></svg>),
+  Lock: ({ size, className }: P) => (<svg {...base(size)} className={className}><rect x="5" y="10.5" width="14" height="10" rx="3" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></svg>),
+  Edit: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></svg>),
+  Target: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r=".6" fill="currentColor" /></svg>),
+  Question: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="12" cy="12" r="9" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7M12 17h.01" /></svg>),
+  User: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></svg>),
+  Swap: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M7 4 3.5 7.5 7 11M3.5 7.5h13M17 13l3.5 3.5L17 20M20.5 16.5h-13" /></svg>),
+  Trash: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.8 12.5a1.5 1.5 0 0 0 1.5 1.5h6.4a1.5 1.5 0 0 0 1.5-1.5L17.5 7" /></svg>),
+  Logo: ({ size, className }: P) => (<svg {...base(size)} className={className} strokeWidth={2.2}><path d="M6 4v16M18 4l-8.5 8L18 20" /></svg>),
+};
