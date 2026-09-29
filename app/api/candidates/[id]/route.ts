@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 type Body = {
-  action?: "save" | "switch" | "rescore" | "regenerate";
+  action?: "save" | "switch" | "rescore" | "regenerate" | "move";
   draft_subject?: string;
   draft_body?: string;
   draft_type?: "invite" | "rejection";
@@ -23,7 +23,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const c = await getCandidate(id);
     if (c.email_status === "sent" && b.action !== "save") throw new Error("Already sent - nothing to change");
 
-    if (b.action === "rescore") {
+    if (b.action === "move") {
+      // Candidate is a stronger fit for the other role: move them. Drafts are regenerated for the new role.
+      await updateCandidate(id, {
+        applied_role: c.applied_role === "PM" ? "SPM" : "PM",
+        brief: null, draft_type: null, draft_subject: null, draft_body: null, draft_locked: false, email_status: "none",
+      });
+    } else if (b.action === "rescore") {
       await scoreCandidate(id, Date.now() + 50_000);
     } else if (b.action === "switch" || b.action === "regenerate") {
       // Founder overrides the recommendation (or asks for a fresh draft). Locked so re-ranking won't flip it back.
