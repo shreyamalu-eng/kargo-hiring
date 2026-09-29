@@ -1,4 +1,4 @@
-import { listCandidates, getRubric } from "@/lib/db";
+import { listCandidates, getRubric, redactSecrets } from "@/lib/db";
 import { renderEmail } from "@/lib/email";
 import { pendingWork, rankRole } from "@/lib/pipeline";
 import { ROLE_TITLE, shortlistSize, type Role } from "@/lib/types";
@@ -20,7 +20,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
         <div className="card stack" style={{ maxWidth: 560, marginTop: 24 }}>
           <div className="row"><span className="chip rose"><I.Alert size={14} /> Setup needed</span></div>
           <h1 className="h2">The app can&apos;t reach its database yet</h1>
-          <p className="muted" style={{ margin: 0 }}>{e instanceof Error ? e.message : String(e)}</p>
+          <p className="muted" style={{ margin: 0 }}>{redactSecrets(e instanceof Error ? e.message : String(e))}</p>
           <p className="small faint" style={{ margin: 0 }}>Check that DATABASE_URL is set in Vercel → Settings → Environment Variables, then redeploy.</p>
         </div>
       </Shell>
