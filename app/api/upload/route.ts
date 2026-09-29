@@ -1,3 +1,4 @@
+import { redactSecrets } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { ingest, scoreCandidate } from "@/lib/pipeline";
 import { updateCandidate } from "@/lib/db";
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     const scored = await scoreCandidate(c.id, deadline);
     return NextResponse.json({ id, status: scored.status, pm: scored.pm_score, spm: scored.spm_score });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = redactSecrets(e instanceof Error ? e.message : String(e));
     if (id) await updateCandidate(id, { status: "error", error: msg }).catch(() => {});
     const rateLimited = msg.startsWith("RATE_LIMITED");
     return NextResponse.json({ id, error: msg, rateLimited }, { status: rateLimited ? 429 : 500 });
