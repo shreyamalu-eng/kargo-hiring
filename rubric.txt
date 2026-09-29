@@ -1,0 +1,123 @@
+KARGO HIRING RUBRIC  -  Product Manager (PM) and Senior Product Manager (SPM)
+==========================================================================
+Derived from the 8 past-hire profiles in hires/ and the outcome ratings in the case brief.
+The job descriptions were used only to understand the roles - no criterion is taken from them.
+
+STEP 1 - PATTERNS: what the "Exceeds Expectations" hires share that the others lack
+-----------------------------------------------------------------------------------
+Exceeds:   Rohan Desai, Sunita Krishnamurthy, Aditya Shetty, Meghna Tiwari, Lavanya Iyer
+Meets:     Vikram Nair (PM), Rahul Bose (Growth)
+Below:     Preetham Rao (Backend)
+
+Pattern 1 - They did the operational work themselves before building for it.
+  All five Exceeds hires spent real time on an operations floor handling shipments,
+  documentation, carriers or clients with their own hands:
+  Rohan (Operations Executive at a CHA firm, JNPT - 180+ shipments/month),
+  Sunita (documentation for 200+ shipments/month at Trident Freight),
+  Aditya (port services at JNPT - berth windows, DO releases, detention),
+  Meghna (freight forwarder documentation + LC shipments at Coastline),
+  Lavanya (carrier allocation and exception management at Mahindra Logistics).
+  None of the Meets/Below hires did: Vikram (HR-tech SaaS only), Rahul (fintech marketing),
+  Preetham (integrated 3PL APIs from an e-commerce backend - built FOR logistics, never IN it).
+
+Pattern 2 - They built things nobody asked for, and other people adopted them.
+  Rohan: Excel shipment tracker adopted by the 12-person ops team in two weeks; BoL
+  verification prototype built over a weekend, 30 colleagues using it within a month.
+  Sunita: redesigned the documentation workflow over a weekend when the FMS vendor changed
+  format - retained permanently. Lavanya: visibility dashboard adopted by 2 other regional
+  teams. Meghna: 30-60-90 onboarding framework now used by the whole CS team. Aditya: first
+  case-study programme, now the team's primary collateral.
+  Weaker or absent: Vikram (PRD template inside his own PM remit), Preetham (monitoring
+  dashboard, no adoption signal), Rahul (assigned programmes).
+
+Pattern 3 - They own misses openly and turn them into something others use.
+  Lavanya killed 2 of her own features on usage data and wrote the outage post-mortem.
+  Aditya wrote a post-mortem on a 4-month lost deal that became standard practice.
+  Meghna fixed a customs hold overnight and wrote the bug report for a product gap.
+  Rohan led a vendor migration under time pressure with no data loss.
+  Vikram's and Rahul's CVs contain only wins and rising metrics; Preetham's incidents are
+  an assigned on-call rotation, not an owned miss.
+
+Supporting signals (used as lighter-weight criteria):
+  - Direct line to the user, no layer in between (Rohan "without a product layer",
+    Aditya "no account manager layer", Meghna primary contact, Lavanya's discovery pivot)
+    vs Vikram presenting roadmaps up to CTO/VP Sales.
+  - Makes the call (Lavanya's engineering lead: "made calls we trusted immediately. She
+    doesn't hedge.") vs Vikram "socialised", "managed competing stakeholder priorities".
+
+SCORING SCALE (every criterion)
+-------------------------------
+  5 = strong, specific evidence exactly as described
+  3-4 = partial evidence (some of it, or less specific)
+  1-2 = weak or indirect evidence
+  0 = no evidence in the CV
+Weighted total (0-100) = sum over criteria of (weight x score / 5).
+
+==========================================================================
+ROLE: PM
+==========================================================================
+
+Criterion name: Hands-on Operations Time
+Key: hands_on_ops
+What a strong candidate looks like: Has personally done operational work in freight, logistics, ports, supply chain or a similarly operations-heavy floor - handled shipments, documentation, carriers, customs or exceptions themselves - for at least a year, and the CV names the specifics (Bills of Lading, CHAs, carrier allocation, berth windows, exception queues). Partial (2-3): built software for operations users, or embedded/visited with them, but never did the work. Weak (0-1): operations knowledge only from software, consulting, or interviews.
+Weight: 30%
+Source: Rohan, Sunita, Aditya, Meghna, Lavanya (all Exceeds) vs Vikram, Rahul, Preetham.
+
+Criterion name: Unasked Builds That Got Adopted
+Key: unasked_builds
+What a strong candidate looks like: Noticed a gap nobody assigned them, built a fix on their own initiative (a tracker, prototype, SOP, framework, template or process), and other people adopted it - with the adoption named (e.g. "adopted by the 12-person team within two weeks", "now the team standard"). Partial (2-3): improvements inside their assigned scope, or self-started builds with no adoption evidence. Weak (0-1): only assigned deliverables.
+Weight: 25%
+Source: Rohan's Excel tracker and weekend BoL prototype; Sunita's weekend workflow redesign; Lavanya's dashboard; Meghna's onboarding framework; Aditya's case-study programme.
+
+Criterion name: Owns the Miss
+Key: owns_the_miss
+What a strong candidate looks like: Describes a specific thing that went wrong - a killed feature, a lost deal, an outage, a crisis - and shows they owned it personally and turned it into a fix or a documented lesson others now use (post-mortem shared, feature killed with the data behind it, practice adopted). Partial (2-3): handled a crisis but no lesson captured, or generic "managed incidents". Weak (0-1): the CV contains only wins and rising metrics.
+Weight: 20%
+Source: Lavanya's killed features and outage post-mortem; Aditya's lost-deal post-mortem; Meghna's overnight customs fix and bug report. Absent in Vikram and Rahul.
+
+Criterion name: Direct Line to the User
+Key: direct_line
+What a strong candidate looks like: Worked face to face with the people who use the work, with no intermediary layer, and changed what got built because of it - e.g. "no product layer", embedded with ops teams, primary client contact, and a concrete change that came from it. Partial (2-3): user research through structured interviews, surveys or analytics. Weak (0-1): works through stakeholders and presents roadmaps upward; no direct user contact.
+Weight: 15%
+Source: Rohan ("without a product layer"), Aditya ("no account manager layer"), Meghna (primary contact, 12 accounts), Lavanya (discovery session that caused a pivot) vs Vikram.
+
+Criterion name: Makes the Call
+Key: makes_the_call
+What a strong candidate looks like: Makes decisions and acts on them quickly without waiting for approval or consensus - killed their own work, redirected capacity, chose a path under pressure - or has a third-party quote about decisiveness. Partial (2-3): executed decisions that others made. Weak (0-1): language centred on "aligned", "socialised", "supported", "managed stakeholder priorities".
+Weight: 10%
+Source: Lavanya ("She doesn't hedge"), Sunita (independent weekend redesign), Rohan (called the vendor migration) vs Vikram ("socialised").
+
+==========================================================================
+ROLE: SPM
+==========================================================================
+Same criteria, higher bar - especially on how independently the person has operated.
+
+Criterion name: Hands-on Operations Time
+Key: hands_on_ops
+What a strong candidate looks like: Two or more years doing operational work themselves (freight, ports, customs, carriers, supply chain) AND at least one example where that ground knowledge shaped a technical, data or integration decision later (e.g. "designed the integration because I knew what the data actually contained"). Partial (2-3): hands-on operations time with no link to later product decisions, or under a year of it. Weak (0-1): no hands-on operations time.
+Weight: 25%
+Source: Rohan (CHA operations to engineering lead on freight tracking), Lavanya, Sunita.
+
+Criterion name: Unasked Builds That Got Adopted
+Key: unasked_builds
+What a strong candidate looks like: Self-initiated builds whose adoption spread beyond their own team - to other teams, other shifts, other branches or the whole company - or became a core product feature. Partial (2-3): self-started builds adopted only within their own team. Weak (0-1): only assigned deliverables.
+Weight: 15%
+Source: Rohan (weekend prototype became a core platform feature); Lavanya (dashboard adopted by 2 other regional teams).
+
+Criterion name: Owns the Miss
+Key: owns_the_miss
+What a strong candidate looks like: Owned failure at the level of a product area or function - killed features including their own ideas, reversed a direction on evidence, ran the post-mortem and changed how the team works as a result. Partial (2-3): owned individual incidents or kills without a lasting change to practice. Weak (0-1): only wins and rising metrics.
+Weight: 20%
+Source: Lavanya, Aditya.
+
+Criterion name: Direct Line to the User
+Key: direct_line
+What a strong candidate looks like: Even at a senior level still personally in the room with customers or operators (onboardings, discovery, field visits) with a named decision that came from it. Partial (2-3): contact through their team, research reports or account managers. Weak (0-1): no direct contact at senior level.
+Weight: 10%
+Source: Rohan, Aditya, Lavanya.
+
+Criterion name: Makes the Call
+Key: makes_the_call
+What a strong candidate looks like: Has owned a product area or function with no senior layer above them for 2+ years, AND made at least one high-consequence, hard-to-reverse call themselves (architecture, build vs configure vs not touch, killing a product line) and lived with the result. Partial (2-3): made calls inside a structure where a senior PM or committee had final say. Weak (0-1): mainly executed or "aligned" on others' decisions.
+Weight: 30%
+Source: Lavanya ("made calls we trusted immediately"), Rohan (most senior engineer, led migration), Sunita (independent consultant owning client outcomes).
