@@ -36,7 +36,7 @@ Then `cp .env.example .env.local` and fill in `GEMINI_API_KEY` (and later `RESEN
 
 `npm run dev` → http://localhost:3000
 
-Deploy: push to GitHub (`.env` and `.env.local` are git-ignored) → import in Vercel → add `DATABASE_URL`, `GEMINI_API_KEY`, `RESEND_API_KEY`, `EMAIL_ALLOWED_DOMAINS`, `RESEND_FROM`, `DASHBOARD_PASSWORD` → deploy. Set `DASHBOARD_PASSWORD` — the dashboard shows personal details.
+Deploy: push to GitHub (`.env` and `.env.local` are git-ignored) → import in Vercel → add `DATABASE_URL`, `GEMINI_API_KEY`, `RESEND_API_KEY`, `EMAIL_ALLOWED_DOMAINS`, `RESEND_FROM` → deploy. The dashboard is open to anyone with the link (no password), so share the link carefully.
 
 Changed the rubric? Edit `rubric.txt`, then `npm run db:setup` again (safe to re-run; it replaces the rubric rows and keeps candidates).
 
