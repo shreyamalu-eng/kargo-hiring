@@ -49,6 +49,9 @@ export async function generateJson<T>(prompt: string, schema: object, opts: { de
       const msg = e instanceof Error ? e.message : String(e);
       const status = (e as { status?: number })?.status;
       const retryable = status === 429 || status === 500 || status === 503 || /429|RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded|non-JSON|abort|timeout|timed out/i.test(msg);
+      // Free-tier *daily* quota is used up: retrying won't help until it resets.
+      if (/PerDay|per day|daily/i.test(msg))
+        throw new Error(`DAILY_LIMIT: Gemini's free daily limit for ${MODEL()} is used up. It resets around 12:30 pm India time. To continue now, turn on billing for your Gemini key or set GEMINI_MODEL to another Flash model in Vercel.`);
       if (status === 404 || /not found/i.test(msg))
         throw new Error(`Gemini model "${MODEL()}" not available for this key - set GEMINI_MODEL to a current Flash model. (${msg.slice(0, 160)})`);
       const hinted = Number(msg.match(/retry in ([\d.]+)s/i)?.[1] ?? msg.match(/"retryDelay":\s*"(\d+)s"/)?.[1] ?? 0) * 1000;

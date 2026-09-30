@@ -249,7 +249,7 @@ export async function refreshDrafts(role: Role, budgetMs = 45_000) {
       done++;
     } catch (e) {
       lastError = redactSecrets(e instanceof Error ? e.message : String(e));
-      if (lastError.startsWith("RATE_LIMITED")) break;
+      if (lastError.startsWith("RATE_LIMITED") || lastError.startsWith("DAILY_LIMIT")) break;
     }
   }
   return { done, remaining: work.length - done, lastError };
