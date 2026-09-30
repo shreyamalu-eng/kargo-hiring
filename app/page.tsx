@@ -1,7 +1,8 @@
-import { listCandidates, getRubric, redactSecrets } from "@/lib/db";
-import { renderEmail } from "@/lib/email";
-import { pendingWork, rankRole } from "@/lib/pipeline";
-import { ROLE_TITLE, shortlistSize, type Role } from "@/lib/types";
+import Link from "next/link";
+import { getRoles, getRubric, listCandidates, redactSecrets } from "@/lib/db";
+import { renderEmail, testRecipient } from "@/lib/email";
+import { pendingWork, rankRole, staleCount } from "@/lib/pipeline";
+import { criteriaSig } from "@/lib/types";
 import Inbox, { type CardData } from "./ui/Inbox";
 import Shell from "./ui/Shell";
 import { I } from "./ui/icons";
@@ -10,13 +11,12 @@ export const dynamic = "force-dynamic";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;
-  const role: Role = sp.role === "SPM" ? "SPM" : "PM";
-  let all, rubric;
+  let all, rubric, roles;
   try {
-    [all, rubric] = await Promise.all([listCandidates(), getRubric()]);
+    [all, rubric, roles] = await Promise.all([listCandidates(), getRubric(), getRoles()]);
   } catch (e) {
     return (
-      <Shell active={role}>
+      <Shell active="">
         <div className="card stack" style={{ maxWidth: 560, marginTop: 24 }}>
           <div className="row"><span className="chip rose"><I.Alert size={14} /> Setup needed</span></div>
           <h1 className="h2">The app can&apos;t reach its database yet</h1>
@@ -26,32 +26,52 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
       </Shell>
     );
   }
-  const other: Role = role === "PM" ? "SPM" : "PM";
+  if (!roles.length) {
+    return (
+      <Shell active="">
+        <div className="card empty" style={{ marginTop: 16 }}>
+          <div className="art"><I.Target size={30} /></div>
+          <h1 className="h2">No open roles</h1>
+          <p className="muted">Add a role and its criteria, then add CVs.</p>
+          <Link href="/roles/new" className="btn primary lg"><I.Plus size={18} /> Add a role</Link>
+        </div>
+      </Shell>
+    );
+  }
+  const role = roles.find((r) => r.key === sp.role) ?? roles[0];
   const toCard = (c: (typeof all)[number], rank: number | null): CardData => {
     const { cv_text: _drop, ...rest } = c;
     void _drop;
     return { ...rest, rank, preview: c.draft_body ? renderEmail(c) : null };
   };
-  const cards = rankRole(all, role).map((c, i) => toCard(c, i + 1));
-  const pending = all.filter((c) => c.applied_role === role && c.status !== "scored").map((c) => toCard(c, null));
-  const counts = { PM: all.filter((c) => c.applied_role === "PM").length, SPM: all.filter((c) => c.applied_role === "SPM").length };
-  const waiting = {
-    PM: all.filter((c) => c.applied_role === "PM" && c.email_status !== "sent").length,
-    SPM: all.filter((c) => c.applied_role === "SPM" && c.email_status !== "sent").length,
-  };
+  const cards = rankRole(all, role.key).map((c, i) => toCard(c, i + 1));
+  const pending = all.filter((c) => c.applied_role === role.key && c.status !== "scored").map((c) => toCard(c, null));
+  const crit = rubric.filter((r) => r.role === role.key);
+  // People who applied elsewhere but score clearly better for this role.
+  const fits = all
+    .filter((c) => c.applied_role !== role.key && c.status === "scored" && c.email_status !== "sent" && c.scores?.[role.key])
+    .map((c) => ({ c, s: c.scores![role.key].total, own: c.scores?.[c.applied_role]?.total ?? 0 }))
+    .filter((x) => x.s >= 45 && x.s >= x.own + 10)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 5)
+    .map((x) => ({ id: x.c.id, name: x.c.personal_details?.name ?? x.c.file_name, headline: x.c.headline ?? "", score: x.s, from: roles.find((r) => r.key === x.c.applied_role)?.title ?? x.c.applied_role }));
+  const waitingOf = (k: string) => all.filter((c) => c.applied_role === k && c.status === "scored" && c.email_status !== "sent").length;
   return (
-    <Shell app active={role} counts={counts} waiting={waiting}>
+    <Shell app active={role.key}>
       <Inbox
-        role={role}
-        roleTitle={ROLE_TITLE[role]}
-        other={other}
-        otherTitle={ROLE_TITLE[other]}
+        role={role.key}
+        roleTitle={role.title}
+        others={roles.filter((r) => r.key !== role.key).map((r) => ({ key: r.key, title: r.title }))}
+        roles={roles.map((r) => ({ key: r.key, title: r.title, waiting: waitingOf(r.key) }))}
         cards={cards}
         pending={pending}
-        shortlist={shortlistSize()}
-        rubric={rubric.filter((r) => r.role === role)}
+        shortlist={role.shortlist_size}
+        rubric={crit}
         resendReady={!!process.env.RESEND_API_KEY}
-        pendingDrafts={pendingWork(all, role).length}
+        testRecipient={testRecipient()}
+        pendingDrafts={pendingWork(all, role.key, role.shortlist_size).length}
+        fits={fits}
+        stale={crit.length ? staleCount(all, role.key, criteriaSig(crit)) : 0}
       />
     </Shell>
   );
