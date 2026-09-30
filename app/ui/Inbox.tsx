@@ -114,7 +114,9 @@ export default function Inbox(p: Props) {
           }
           setGen({ running: true, left: r.remaining });
         } catch (e) {
-          setGen({ running: false, left: 0, note: e instanceof Error ? e.message : String(e) });
+          const m = e instanceof Error ? e.message : String(e);
+          if (/\((502|503|504)\)/.test(m)) { await new Promise((s) => setTimeout(s, 8000)); continue; } // slow request, try again
+          setGen({ running: false, left: 0, note: m });
           return;
         }
       }
@@ -310,11 +312,13 @@ function PendingRow({ c, onDone }: { c: CardData; onDone: (t: string, err?: bool
     setBusy(true);
     try { await fn(); onDone(ok); } catch (e) { onDone(e instanceof Error ? e.message : String(e), true); } finally { setBusy(false); }
   };
+  const stuck = c.status === "processing" && Date.now() - new Date(c.created_at).getTime() > 120_000;
   const friendly = (e?: string | null) =>
-    !e ? "Still reading this CV…" : e.startsWith("RATE_LIMITED") ? "The AI was busy. Retry in a minute." : e.includes("scanned") ? "This file is an image, not text. Upload a text PDF or DOCX." : e;
+    !e ? (stuck ? "This took too long and stopped. Press Retry." : "Still reading this CV…") :
+    e.startsWith("NOT_A_CV") ? "This looks like a job description, not a CV. Remove it." : e.startsWith("RATE_LIMITED") ? "The AI was busy. Retry in a minute." : e.includes("scanned") ? "This file is an image, not text. Upload a text PDF or DOCX." : e;
   return (
     <div className="person" style={{ cursor: "default" }}>
-      <span className="avatar" style={{ background: "var(--rose-soft)", color: "var(--rose)" }}>{c.status === "processing" ? <span className="spin" /> : <I.Alert size={18} />}</span>
+      <span className="avatar" style={{ background: "var(--rose-soft)", color: "var(--rose)" }}>{c.status === "processing" && !stuck ? <span className="spin" /> : <I.Alert size={18} />}</span>
       <span style={{ minWidth: 0 }}>
         <div className="name">{c.personal_details?.name || c.file_name}</div>
         <div className="sub" style={{ whiteSpace: "normal" }}>{friendly(c.error)}</div>

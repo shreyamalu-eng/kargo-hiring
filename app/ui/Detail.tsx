@@ -74,7 +74,7 @@ export default function Detail(p: Props) {
 
   const firstFromName = name.split(" ")[0] || first;
   const preview = (t: string) => t.replaceAll("[NAME]", firstFromName);
-  const sendLabel = type === "invite" ? "Send interview invite" : "Send decline";
+  const sendLabel = (type ?? recommended) === "invite" ? "Send interview invite" : "Send decline";
   const briefParts = c.brief ? splitBrief(c.brief) : [];
   const briefMeta = [
     { label: "Who they are", icon: <I.User size={16} />, style: { background: "var(--accent-soft)", color: "var(--accent)" } },
