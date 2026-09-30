@@ -1,7 +1,7 @@
 import "server-only";
 import { neon, neonConfig, type NeonQueryFunction } from "@neondatabase/serverless";
-import type { Candidate, Criterion, Role } from "./types";
-import { RUBRIC_ROWS, SCHEMA_STATEMENTS } from "./schema";
+import type { Candidate, Criterion, Role, RoleDef } from "./types";
+import { DEFAULT_ROLES, RUBRIC_ROWS, SCHEMA_STATEMENTS } from "./schema";
 
 let client: NeonQueryFunction<false, false> | null = null;
 
@@ -44,6 +44,16 @@ function ensureSchema() {
           RUBRIC_ROWS.map((r) =>
             tx`insert into rubric_criteria (role, key, name, description, weight, sort_order)
                values (${r.role}, ${r.key}, ${r.name}, ${r.description}, ${r.weight}, ${r.sort_order})`
+          )
+        );
+      }
+      const [{ r }] = (await q.query("select count(*)::int as r from roles")) as { r: number }[];
+      if (r === 0) {
+        await q.transaction((tx) =>
+          DEFAULT_ROLES.map((x) =>
+            tx`insert into roles (key, title, tagline, requirements, interview_note, shortlist_size, sort_order)
+               values (${x.key}, ${x.title}, ${x.tagline}, ${x.requirements}, ${x.interview_note}, ${x.shortlist_size}, ${x.sort_order})
+               on conflict (key) do nothing`
           )
         );
       }
@@ -121,4 +131,51 @@ export async function updateCandidate(id: string, patch: Partial<Candidate>) {
 export async function deleteCandidate(id: string) {
   await ensureSchema();
   await sql().query("delete from candidates where id = $1", [id]);
+}
+
+// ---------------- roles ----------------
+function toRole(r: Record<string, unknown>): RoleDef {
+  return { ...(r as RoleDef), shortlist_size: Number(r.shortlist_size ?? 5), sort_order: Number(r.sort_order ?? 0), archived: !!r.archived };
+}
+
+export async function getRoles(includeArchived = false): Promise<RoleDef[]> {
+  await ensureSchema();
+  const rows = await sql().query(`select * from roles ${includeArchived ? "" : "where not archived"} order by sort_order, created_at`);
+  return rows.map(toRole);
+}
+
+export async function getRole(key: Role): Promise<RoleDef | null> {
+  await ensureSchema();
+  const rows = await sql().query("select * from roles where key = $1", [key]);
+  return rows[0] ? toRole(rows[0]) : null;
+}
+
+export async function getCriteria(role: Role): Promise<Criterion[]> {
+  await ensureSchema();
+  return (await sql().query("select * from rubric_criteria where role = $1 order by sort_order", [role])) as Criterion[];
+}
+
+/** Creates or updates a role and replaces its criteria in one transaction. */
+export async function saveRole(role: RoleDef, criteria: Omit<Criterion, "role" | "sort_order">[]) {
+  await ensureSchema();
+  await sql().transaction((tx) => [
+    tx`insert into roles (key, title, tagline, requirements, interview_note, shortlist_size, sort_order, archived)
+       values (${role.key}, ${role.title}, ${role.tagline}, ${role.requirements}, ${role.interview_note}, ${role.shortlist_size}, ${role.sort_order}, ${role.archived})
+       on conflict (key) do update set title = excluded.title, tagline = excluded.tagline, requirements = excluded.requirements,
+         interview_note = excluded.interview_note, shortlist_size = excluded.shortlist_size, archived = excluded.archived`,
+    tx`delete from rubric_criteria where role = ${role.key}`,
+    ...criteria.map((c, i) => tx`insert into rubric_criteria (role, key, name, description, weight, sort_order)
+       values (${role.key}, ${c.key}, ${c.name}, ${c.description}, ${c.weight}, ${i})`),
+  ]);
+}
+
+export async function setRoleArchived(key: Role, archived: boolean) {
+  await ensureSchema();
+  await sql().query("update roles set archived = $1 where key = $2", [archived, key]);
+}
+
+export async function nextSortOrder() {
+  await ensureSchema();
+  const [{ m }] = (await sql().query("select coalesce(max(sort_order), -1)::int + 1 as m from roles")) as { m: number }[];
+  return m;
 }
