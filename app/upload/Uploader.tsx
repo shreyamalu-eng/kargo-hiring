@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { I } from "../ui/icons";
 
-type Role = "PM" | "SPM";
+type Role = string;
+type RoleOpt = { key: string; title: string; tagline: string };
 type Item = { file: File; state: "queued" | "working" | "done" | "error"; note?: string };
 const MAX = 4 * 1024 * 1024; // Vercel request limit is 4.5 MB
 const OK_EXT = /\.(pdf|docx|txt)$/i;
 
-export default function Uploader({ initialRole }: { initialRole: Role | null }) {
+export default function Uploader({ initialRole, roles }: { initialRole: Role | null; roles: RoleOpt[] }) {
   const [role, setRole] = useState<Role | null>(initialRole);
   const [items, setItems] = useState<Item[]>([]);
   const [phase, setPhase] = useState<"pick" | "running" | "done">("pick");
@@ -47,7 +48,7 @@ export default function Uploader({ initialRole }: { initialRole: Role | null }) 
       try {
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const json = await res.json().catch(() => ({ error: `Error ${res.status}` }));
-        if (res.ok) return set(i, { state: "done", note: `Scored ${Math.round(role === "PM" ? json.pm : json.spm)}` });
+        if (res.ok) return set(i, { state: "done", note: json.score != null ? `Scored ${Math.round(json.score)}` : "Scored" });
         if (String(json.error ?? "").startsWith("DAILY_LIMIT")) {
           setWaitNote(String(json.error).replace("DAILY_LIMIT: ", ""));
           return set(i, { state: "error", note: "Not scored yet: the AI's daily limit is used up" });
@@ -94,7 +95,7 @@ export default function Uploader({ initialRole }: { initialRole: Role | null }) 
       <div>
         <div className="label">ADD CVS</div>
         <h1 className="h1">Who applied, and for which role?</h1>
-        <p className="muted" style={{ margin: "6px 0 0" }}>Each CV is scored against both rubrics, ranked, and gets a draft reply. Nothing is sent until you press send.</p>
+        <p className="muted" style={{ margin: "6px 0 0" }}>Each CV is scored against every open role, ranked, and gets a draft reply. Nothing is sent until you press send.</p>
       </div>
 
       <div className="steps" aria-label="Progress">
@@ -104,14 +105,18 @@ export default function Uploader({ initialRole }: { initialRole: Role | null }) 
       </div>
 
       <div className="choice-grid">
-        {(["PM", "SPM"] as Role[]).map((r) => (
-          <button key={r} className={`choice ${role === r ? "on" : ""}`} onClick={() => phase === "pick" && setRole(r)} disabled={phase !== "pick"} aria-pressed={role === r}>
-            <span className="ic">{r === "PM" ? <I.Users /> : <I.Star />}</span>
-            <span><div className="h3">{r === "PM" ? "Product Manager" : "Senior Product Manager"}</div>
-              <div className="small muted">{r === "PM" ? "Core platform · 2–4 yrs" : "Integrations & data layer · 5–8 yrs"}</div></span>
-            {role === r && <span style={{ marginLeft: "auto", color: "var(--accent)" }}><I.CheckCircle /></span>}
+        {roles.map((r, idx) => (
+          <button key={r.key} className={`choice ${role === r.key ? "on" : ""}`} onClick={() => phase === "pick" && setRole(r.key)} disabled={phase !== "pick"} aria-pressed={role === r.key}>
+            <span className="ic">{idx % 2 === 0 ? <I.Users /> : <I.Star />}</span>
+            <span style={{ minWidth: 0 }}><div className="h3">{r.title}</div>
+              {r.tagline && <div className="small muted">{r.tagline}</div>}</span>
+            {role === r.key && <span style={{ marginLeft: "auto", color: "var(--accent)" }}><I.CheckCircle /></span>}
           </button>
         ))}
+        <Link href="/roles/new" className="choice" style={{ borderStyle: "dashed" }}>
+          <span className="ic"><I.Plus /></span>
+          <span><div className="h3">Another role</div><div className="small muted">Add its requirements and criteria first</div></span>
+        </Link>
       </div>
 
       {role && phase === "pick" && (
