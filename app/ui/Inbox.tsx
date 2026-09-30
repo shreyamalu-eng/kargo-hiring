@@ -104,6 +104,10 @@ export default function Inbox(p: Props) {
           router.refresh();
           if (r.remaining === 0) break;
           if (r.done === 0 && r.lastError) {
+            if (String(r.lastError).startsWith("DAILY_LIMIT")) {
+              setGen({ running: false, left: r.remaining, note: String(r.lastError).replace("DAILY_LIMIT: ", "") });
+              return;
+            }
             if (String(r.lastError).startsWith("RATE_LIMITED")) {
               setGen({ running: true, left: r.remaining, note: "The AI is busy for a moment, retrying in 30s…" });
               await new Promise((s) => setTimeout(s, 30_000));
@@ -315,7 +319,7 @@ function PendingRow({ c, onDone }: { c: CardData; onDone: (t: string, err?: bool
   const stuck = c.status === "processing" && Date.now() - new Date(c.created_at).getTime() > 120_000;
   const friendly = (e?: string | null) =>
     !e ? (stuck ? "This took too long and stopped. Press Retry." : "Still reading this CV…") :
-    e.startsWith("NOT_A_CV") ? "This looks like a job description, not a CV. Remove it." : e.startsWith("RATE_LIMITED") ? "The AI was busy. Retry in a minute." : e.includes("scanned") ? "This file is an image, not text. Upload a text PDF or DOCX." : e;
+    e.startsWith("NOT_A_CV") ? "This looks like a job description, not a CV. Remove it." : e.startsWith("RATE_LIMITED") ? "The AI was busy. Retry in a minute." : e.startsWith("DAILY_LIMIT") ? "The AI's free daily limit is used up. Retry after it resets." : e.includes("scanned") ? "This file is an image, not text. Upload a text PDF or DOCX." : e;
   return (
     <div className="person" style={{ cursor: "default" }}>
       <span className="avatar" style={{ background: "var(--rose-soft)", color: "var(--rose)" }}>{c.status === "processing" && !stuck ? <span className="spin" /> : <I.Alert size={18} />}</span>
