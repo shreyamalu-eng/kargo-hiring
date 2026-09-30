@@ -1,6 +1,6 @@
 import { redactSecrets } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { deleteCandidate, getCandidate, updateCandidate } from "@/lib/db";
+import { deleteCandidate, getCandidate, getRoles, updateCandidate } from "@/lib/db";
 import { generateBrief, generateEmail, rankRole, scoreCandidate } from "@/lib/pipeline";
 import { listCandidates } from "@/lib/db";
 import type { Candidate } from "@/lib/types";
@@ -13,6 +13,7 @@ type Body = {
   draft_subject?: string;
   draft_body?: string;
   draft_type?: "invite" | "rejection";
+  to?: string;
   name?: string;
   email?: string;
 };
@@ -26,8 +27,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     if (b.action === "move") {
       // Candidate is a stronger fit for the other role: move them. Drafts are regenerated for the new role.
+      const roles = (await getRoles()).map((r) => r.key).filter((k) => k !== c.applied_role);
+      const best = roles.sort((a, b) => (c.scores?.[b]?.total ?? 0) - (c.scores?.[a]?.total ?? 0))[0];
+      const to = b.to && roles.includes(b.to) ? b.to : best;
+      if (!to) throw new Error("There is no other open role to move this candidate to");
       await updateCandidate(id, {
-        applied_role: c.applied_role === "PM" ? "SPM" : "PM",
+        applied_role: to,
         brief: null, draft_type: null, draft_subject: null, draft_body: null, draft_locked: false, email_status: "none",
       });
     } else if (b.action === "rescore") {
