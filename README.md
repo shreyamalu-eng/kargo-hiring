@@ -4,6 +4,10 @@ Internal tool for Arjun (Case 2). Upload CVs → personal details split off → 
 
 Stack: Next.js 15 (App Router) · Neon (Postgres) · Gemini Flash · Resend · Vercel.
 
+## Roles
+
+Open roles live in the database, not in code. **Roles & criteria** (sidebar) lets you add a role with its requirements, one-line summary, interview details (used in invite emails), shortlist size and scoring criteria. **Suggest from past hires** turns what Kargo's best hires had in common into criteria for that role. Every CV is scored against every open role. After adding a role or changing criteria, press **Score existing CVs** / **Update scores** to catch up older CVs.
+
 ## Pipeline (matches the Components Map)
 
 | Step | Where | What happens |
