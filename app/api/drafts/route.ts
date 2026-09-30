@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { refreshDrafts } from "@/lib/pipeline";
+import { getRoles } from "@/lib/db";
 import type { Role } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -9,7 +10,8 @@ export const maxDuration = 60;
 // The client calls this repeatedly until remaining === 0.
 export async function POST(req: Request) {
   const { role } = (await req.json().catch(() => ({}))) as { role?: Role };
-  const roles: Role[] = role === "PM" || role === "SPM" ? [role] : ["PM", "SPM"];
+  const all = (await getRoles()).map((r) => r.key);
+  const roles: Role[] = role && all.includes(role) ? [role] : all;
   let remaining = 0, done = 0;
   let lastError: string | null = null;
   const start = Date.now();
