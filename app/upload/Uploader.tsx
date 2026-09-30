@@ -55,6 +55,11 @@ export default function Uploader({ initialRole }: { initialRole: Role | null }) 
           setWaitNote(null);
           continue;
         }
+        if (res.status === 502 || res.status === 503 || res.status === 504) {
+          set(i, { note: "The server took too long, retrying…" });
+          await new Promise((r) => setTimeout(r, 8000));
+          continue;
+        }
         return set(i, { state: "error", note: friendly(json.error) });
       } catch {
         set(i, { note: "Connection dropped, retrying…" });
@@ -169,6 +174,7 @@ function friendly(e?: string) {
   if (!e) return "Something went wrong";
   if (/scanned|read text/i.test(e)) return "This file is an image. Upload a text-based PDF or DOCX.";
   if (/already been emailed/i.test(e)) return "Already emailed, so it was left as is";
+  if (/NOT_A_CV/.test(e)) return "This looks like a job description, not a CV. It wasn't added to the ranking.";
   if (/GEMINI_API_KEY|DATABASE_URL/.test(e)) return "The app isn't fully set up: " + e;
   return e.length > 140 ? e.slice(0, 140) + "…" : e;
 }
