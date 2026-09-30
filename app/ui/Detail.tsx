@@ -6,7 +6,7 @@ import { I } from "./icons";
 import { api, avatarStyle, band, initials, scoreOf, type CardData } from "./Inbox";
 
 type Props = {
-  c: CardData; role: Role; other: Role; otherTitle: string; total: number; shortlist: number; rubric: Criterion[];
+  c: CardData; role: Role; other: Role | null; otherTitle: string; testRecipient: string | null; total: number; shortlist: number; rubric: Criterion[];
   resendReady: boolean; isDesktop: boolean;
   onBack: () => void; onPrev: () => void; onNext: () => void;
   onSent: () => void; onChanged: (t: string) => void; onError: (t: string) => void; onRemoved: () => void;
@@ -33,7 +33,7 @@ const splitBrief = (b: string) => {
 export default function Detail(p: Props) {
   const { c } = p;
   const s = scoreOf(c, p.role);
-  const os = scoreOf(c, p.other);
+  const os = p.other ? scoreOf(c, p.other) : 0;
   const sc = c.scores?.[p.role];
   const sent = c.email_status === "sent";
   const above = (c.rank ?? 99) <= p.shortlist;
@@ -106,11 +106,11 @@ export default function Detail(p: Props) {
           </div>
           <Ring value={s} />
         </div>
-        {os >= s + 10 && !sent && (
+        {p.other && os >= s + 10 && !sent && (
           <div className="reco" style={{ background: "var(--blue-soft)", color: "#1f4fa8", marginTop: 14 }}>
             <I.Swap size={18} />
             <div style={{ flex: 1 }}>Scores <b className="num">{Math.round(os)}</b> against the {p.otherTitle} rubric, well above this role. Worth considering for that role instead.</div>
-            <button className="btn sm quiet" disabled={!!busy} onClick={() => run("move", () => api(`/api/candidates/${c.id}`, "PATCH", { action: "move" }), `Moved to ${p.otherTitle}`)}>Move</button>
+            <button className="btn sm quiet" disabled={!!busy} onClick={() => run("move", () => api(`/api/candidates/${c.id}`, "PATCH", { action: "move", to: p.other }), `Moved to ${p.otherTitle}`)}>Move</button>
           </div>
         )}
       </section>
@@ -204,7 +204,7 @@ export default function Detail(p: Props) {
         <div className={`detail-actions ${p.isDesktop ? "dock" : "sticky"}`}>
           {confirming ? (
             <div className="confirm" style={{ flex: 1 }}>
-              <span style={{ flex: 1, minWidth: 180 }}>Send to <b>{email}</b>? This can&apos;t be undone.</span>
+              <span style={{ flex: 1, minWidth: 180 }}>Send to <b>{email}</b>{p.testRecipient ? <> (test copy goes to {p.testRecipient})</> : null}? This can&apos;t be undone.</span>
               <button className="btn quiet" onClick={() => setConfirming(false)} disabled={busy === "send"}>Cancel</button>
               <button className="btn primary" onClick={send} disabled={busy === "send"}>{busy === "send" ? <><span className="spin" style={{ borderTopColor: "#fff" }} /> Sending</> : <><I.Send size={16} /> Yes, send</>}</button>
             </div>

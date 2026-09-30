@@ -9,8 +9,11 @@ import Detail from "./Detail";
 
 export type CardData = Omit<Candidate, "cv_text"> & { rank: number | null; preview: { subject: string; body: string } | null };
 
+type RoleLite = { key: Role; title: string };
 type Props = {
-  role: Role; roleTitle: string; other: Role; otherTitle: string;
+  role: Role; roleTitle: string; others: RoleLite[]; roles: (RoleLite & { waiting: number })[];
+  testRecipient: string | null; stale: number;
+  fits: { id: string; name: string; headline: string; score: number; from: string }[];
   cards: CardData[]; pending: CardData[]; shortlist: number; rubric: Criterion[];
   resendReady: boolean; pendingDrafts: number;
 };
@@ -28,7 +31,7 @@ export const avatarStyle = (s: number) =>
   band(s) === "strong" ? { background: "var(--green-soft)", color: "var(--green)" }
   : band(s) === "mid" ? { background: "var(--blue-soft)", color: "var(--blue)" }
   : { background: "var(--grey-soft)", color: "var(--ink-2)" };
-export const scoreOf = (c: CardData, r: Role) => Number((r === "PM" ? c.pm_score : c.spm_score) ?? 0);
+export const scoreOf = (c: CardData, r: Role) => Number(c.scores?.[r]?.total ?? 0);
 
 function greeting() {
   const h = new Date().getHours();
@@ -46,6 +49,29 @@ export default function Inbox(p: Props) {
   const [gen, setGen] = useState<{ running: boolean; left: number; note?: string }>({ running: false, left: p.pendingDrafts });
   const genStarted = useRef(false);
   const [justSent, setJustSent] = useState<Set<string>>(new Set());
+  const [back, setBack] = useState<{ running: boolean; left: number; note?: string }>({ running: false, left: p.stale });
+  const [batch, setBatch] = useState<{ open: boolean; running: boolean; done: number; failed: string[] }>({ open: false, running: false, done: 0, failed: [] });
+
+  async function runBackfill() {
+    setBack({ running: true, left: p.stale });
+    for (let i = 0; i < 80; i++) {
+      try {
+        const r = await api(`/api/roles/${encodeURIComponent(p.role)}/backfill`, "POST");
+        if (r.remaining === 0) { setBack({ running: false, left: 0 }); router.refresh(); return; }
+        if (r.done === 0 && r.lastError) {
+          if (String(r.lastError).startsWith("DAILY_LIMIT")) { setBack({ running: false, left: r.remaining, note: String(r.lastError).replace("DAILY_LIMIT: ", "") }); return; }
+          await new Promise((s) => setTimeout(s, 30_000));
+        }
+        setBack({ running: true, left: r.remaining });
+        router.refresh();
+      } catch (e) {
+        const m = e instanceof Error ? e.message : String(e);
+        if (/\((502|503|504)\)/.test(m)) { await new Promise((s) => setTimeout(s, 8000)); continue; }
+        setBack({ running: false, left: 0, note: m });
+        return;
+      }
+    }
+  }
 
   const notify = useCallback((text: string, err?: boolean) => {
     setToast({ text, err });
@@ -137,8 +163,25 @@ export default function Inbox(p: Props) {
     return [c.personal_details?.name, c.headline, c.file_name].some((v) => (v ?? "").toLowerCase().includes(needle));
   });
   const top = visible.filter((c) => (c.rank ?? 99) <= p.shortlist);
+  const batchable = cards.filter((c) => (c.rank ?? 99) <= p.shortlist && c.email_status !== "sent" && c.draft_type === "invite" && c.draft_body && c.personal_details?.email);
+
+  async function sendShortlist() {
+    setBatch({ open: true, running: true, done: 0, failed: [] });
+    const failed: string[] = [];
+    let done = 0;
+    for (const c of batchable) {
+      try { await api("/api/send", "POST", { id: c.id }); done++; setJustSent((xs) => new Set(xs).add(c.id)); }
+      catch (e) { failed.push(`${c.personal_details?.name ?? c.file_name}: ${e instanceof Error ? e.message : e}`); }
+      setBatch({ open: true, running: true, done, failed });
+    }
+    setBatch({ open: false, running: false, done, failed });
+    notify(failed.length ? `Sent ${done}, ${failed.length} failed: ${failed[0]}` : `Sent ${done} interview invite${done === 1 ? "" : "s"}`, failed.length > 0);
+    router.refresh();
+  }
   const rest = visible.filter((c) => (c.rank ?? 99) > p.shortlist);
   const current = cards.find((c) => c.id === selected) ?? null;
+  const bestOther = (c: CardData) =>
+    p.others.map((r) => ({ ...r, s: scoreOf(c, r.key) })).filter((r) => c.scores?.[r.key]).sort((a, b) => b.s - a.s)[0] ?? null;
 
   const nextAfter = useCallback((id: string) => {
     const idx = cards.findIndex((c) => c.id === id);
@@ -175,10 +218,19 @@ export default function Inbox(p: Props) {
         <p className="muted" style={{ maxWidth: 420, margin: "8px auto 20px" }}>
           Add CVs and each one is read, scored against the rubric built from your best hires, and ranked. Your shortlist is ready in a few minutes.
         </p>
-        <Link href={`/upload?role=${p.role}`} className="btn primary lg"><I.Plus size={18} /> Add {p.role} CVs</Link>
+        <Link href={`/upload?role=${encodeURIComponent(p.role)}`} className="btn primary lg"><I.Plus size={18} /> Add CVs for this role</Link>
+        {p.fits.length > 0 && (
+          <div className="stack" style={{ gap: 6, textAlign: "left", maxWidth: 640, margin: "28px auto 0" }}>
+            <Fits fits={p.fits} role={p.role} roleTitle={p.roleTitle} onDone={(t, e) => { notify(t, e); router.refresh(); }} />
+          </div>
+        )}
+        {toast && <div className={`toast ${toast.err ? "err" : ""}`} role="status">{toast.err ? <I.Alert size={18} /> : <I.CheckCircle size={18} />}{toast.text}</div>}
       </div>
     );
   }
+
+  const strengths = (c: CardData) =>
+    (c.scores?.[p.role]?.criteria ?? []).filter((x) => x.score >= 4).sort((a, b) => b.score - a.score || b.weight - a.weight).slice(0, 2).map((x) => x.name);
 
   const Row = ({ c }: { c: CardData }) => {
     const s = scoreOf(c, p.role);
@@ -188,7 +240,10 @@ export default function Inbox(p: Props) {
         <span className="avatar" style={sent ? { background: "var(--grey-soft)", color: "var(--ink-3)" } : avatarStyle(s)}>{sent ? <I.Check size={18} /> : initials(c.personal_details?.name)}</span>
         <span style={{ minWidth: 0 }}>
           <div className="name">{c.personal_details?.name || c.file_name}</div>
-          <div className="sub">#{c.rank} · {c.headline || "Reading CV…"}</div>
+          <div className="sub two">#{c.rank} · {c.headline || "Reading CV…"}</div>
+          {strengths(c).length > 0 && (
+            <div className="strengths">{strengths(c).map((x) => <span key={x} className="mini"><I.Check size={11} /> {x}</span>)}</div>
+          )}
         </span>
         <span className="right">
           <span className={`score-pill num band-${band(s)}`}>{Math.round(s)}</span>
@@ -203,11 +258,22 @@ export default function Inbox(p: Props) {
 
   return (
     <div className="home">
+      <div className="role-switch mobile-only" role="tablist" aria-label="Open roles">
+        {p.roles.map((r) => (
+          <Link key={r.key} href={`/?role=${encodeURIComponent(r.key)}`} className={`chip ${r.key === p.role ? "accent" : ""}`} role="tab" aria-selected={r.key === p.role}>
+            {r.title}{r.waiting > 0 && <span className="num" style={{ opacity: 0.7 }}> · {r.waiting}</span>}
+          </Link>
+        ))}
+        <Link href="/roles/new" className="chip"><I.Plus size={12} /> Role</Link>
+      </div>
       <div className="hello">
         <div>
           <div className="label">{p.roleTitle.toUpperCase()} · {p.cards.length + p.pending.length} CANDIDATES</div>
           <h1 className="h1" suppressHydrationWarning>{greeting()}, Arjun</h1>
         </div>
+        <span className="spacer" />
+        <Link href={`/roles/${encodeURIComponent(p.role)}`} className="btn sm quiet"><I.Edit size={14} /> Edit role &amp; criteria</Link>
+        <Link href={`/upload?role=${encodeURIComponent(p.role)}`} className="btn sm"><I.Plus size={14} /> Add CVs</Link>
       </div>
 
       <section className="progress-card">
@@ -231,6 +297,20 @@ export default function Inbox(p: Props) {
         )}
       </section>
 
+      {p.testRecipient && (
+        <div className="banner small"><I.Mail size={16} /><span><b>Test mode</b> · emails go to {p.testRecipient}</span></div>
+      )}
+      {(p.stale > 0 || back.running || back.note) && (
+        <div className={`banner ${back.note && !back.running ? "err" : ""}`}>
+          {back.running ? <span className="spin" /> : <I.Refresh size={18} />}
+          <span style={{ flex: 1 }}>
+            {back.running ? <>Updating scores for this role… <b className="num">{back.left}</b> left.</>
+              : back.note ? back.note
+              : <><b className="num">{p.stale}</b> CV{p.stale === 1 ? " hasn't" : "s haven't"} been scored with this role&apos;s current criteria yet.</>}
+          </span>
+          {!back.running && p.stale > 0 && <button className="btn sm" onClick={runBackfill}>Update scores</button>}
+        </div>
+      )}
       {(gen.running || gen.note) && (
         <div className={`banner ${gen.running ? "" : "err"}`}>
           {gen.running ? <span className="spin" /> : <I.Alert size={18} />}
@@ -259,13 +339,32 @@ export default function Inbox(p: Props) {
               </>
             )}
             {top.length > 0 && (
-              <div className="section-head"><span className="chip green"><I.Star size={12} /> Shortlist</span><span className="small faint">Top {p.shortlist} · recommended for interview</span></div>
+              <div className="section-head"><span className="chip green"><I.Star size={12} /> Shortlist</span><span className="small faint">Top {p.shortlist} · recommended for interview</span>
+                <span className="spacer" />
+                {batchable.length > 1 && p.resendReady && !batch.open && (
+                  <button className="btn sm green" onClick={() => setBatch({ open: true, running: false, done: 0, failed: [] })}><I.Send size={13} /> Invite all {batchable.length}</button>
+                )}
+              </div>
+            )}
+            {batch.open && (
+              <div className="card flat stack" style={{ background: "var(--green-soft)", padding: 14, gap: 10 }}>
+                <div className="h3">Send interview invites to {batchable.length} people?</div>
+                <div className="small" style={{ display: "grid", gap: 4 }}>
+                  {batchable.map((c) => <div key={c.id}>• <b>{c.personal_details?.name}</b> <span className="muted">{p.testRecipient ? `(test copy to ${p.testRecipient})` : c.personal_details?.email}</span></div>)}
+                </div>
+                <div className="small muted">Each gets the draft shown on their card. Open a card first if you want to edit one.</div>
+                <div className="row">
+                  <button className="btn quiet" disabled={batch.running} onClick={() => setBatch({ open: false, running: false, done: 0, failed: [] })}>Cancel</button>
+                  <button className="btn primary" disabled={batch.running} onClick={sendShortlist}>{batch.running ? <><span className="spin" style={{ borderTopColor: "#fff" }} /> Sending {batch.done + 1} of {batchable.length}</> : <><I.Send size={15} /> Yes, send {batchable.length} invites</>}</button>
+                </div>
+              </div>
             )}
             {top.map((c) => <Row key={c.id} c={c} />)}
             {rest.length > 0 && (
               <div className="section-head"><span className="chip amber">Below the line</span><span className="small faint">Recommended decline · skim once</span></div>
             )}
             {rest.map((c) => <Row key={c.id} c={c} />)}
+            {filter !== "sent" && !needle && <Fits fits={p.fits} role={p.role} roleTitle={p.roleTitle} onDone={(t, e) => { notify(t, e); router.refresh(); }} />}
             {visible.length === 0 && (
               <div className="empty small">{needle ? "No one matches that search." : filter === "sent" ? "Nothing sent yet." : "Everyone here has heard back."}</div>
             )}
@@ -278,8 +377,9 @@ export default function Inbox(p: Props) {
               key={current.id}
               c={current}
               role={p.role}
-              other={p.other}
-              otherTitle={p.otherTitle}
+              other={bestOther(current)?.key ?? null}
+              otherTitle={bestOther(current)?.title ?? ""}
+              testRecipient={p.testRecipient}
               total={p.cards.length}
               shortlist={p.shortlist}
               rubric={p.rubric}
@@ -307,6 +407,34 @@ export default function Inbox(p: Props) {
 
       {toast && <div className={`toast ${toast.err ? "err" : ""}`} role="status">{toast.err ? <I.Alert size={18} /> : <I.CheckCircle size={18} />}{toast.text}</div>}
     </div>
+  );
+}
+
+function Fits({ fits, role, roleTitle, onDone }: { fits: Props["fits"]; role: Role; roleTitle: string; onDone: (t: string, err?: boolean) => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  if (!fits.length) return null;
+  return (
+    <>
+      <div className="section-head"><span className="chip blue"><I.Swap size={12} /> Strong fits from other roles</span><span className="small faint">Scored higher for {roleTitle}</span></div>
+      {fits.map((f) => (
+        <div key={f.id} className="person" style={{ cursor: "default" }}>
+          <span className="avatar" style={{ background: "var(--blue-soft)", color: "var(--blue)" }}>{initials(f.name)}</span>
+          <span style={{ minWidth: 0 }}>
+            <div className="name">{f.name}</div>
+            <div className="sub two">Applied for {f.from} · {f.headline}</div>
+          </span>
+          <span className="right">
+            <span className="score-pill num band-mid">{Math.round(f.score)}</span>
+            <button className="btn sm" disabled={!!busy} onClick={async () => {
+              setBusy(f.id);
+              try { await api(`/api/candidates/${f.id}`, "PATCH", { action: "move", to: role }); onDone(`Moved ${f.name} to ${roleTitle}`); }
+              catch (e) { onDone(e instanceof Error ? e.message : String(e), true); }
+              finally { setBusy(null); }
+            }}>{busy === f.id ? "…" : "Move here"}</button>
+          </span>
+        </div>
+      ))}
+    </>
   );
 }
 
