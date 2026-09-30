@@ -60,12 +60,13 @@ const scoreItem = {
 const scoreSchema = {
   type: Type.OBJECT,
   properties: {
+    is_cv: { type: Type.BOOLEAN, description: "true only if this document is a person's CV/resume (not a job description, cover letter or other document)" },
     headline: { type: Type.STRING, description: "Max 18 words, anonymised: current role, years, domain. No names." },
     PM: { type: Type.ARRAY, items: scoreItem },
     SPM: { type: Type.ARRAY, items: scoreItem },
   },
-  required: ["headline", "PM", "SPM"],
-  propertyOrdering: ["headline", "PM", "SPM"],
+  required: ["is_cv", "headline", "PM", "SPM"],
+  propertyOrdering: ["is_cv", "headline", "PM", "SPM"],
 };
 
 function rubricBlock(rubric: Criterion[], role: Role) {
@@ -99,8 +100,11 @@ CV (redacted):
 ${c.cv_text}
 """`;
 
-  type Raw = { headline: string } & Record<Role, { key: string; score: number; reason: string }[]>;
+  type Raw = { is_cv?: boolean; headline: string } & Record<Role, { key: string; score: number; reason: string }[]>;
   const out = await generateJson<Raw>(prompt, scoreSchema, { deadline });
+  if (out.is_cv === false || /^job description/i.test(out.headline ?? "")) {
+    throw new Error("NOT_A_CV: This looks like a job description or another document, not a candidate's CV. Remove it or upload the right file.");
+  }
 
   const scores: Partial<Record<Role, RoleScore>> = {};
   for (const role of ROLES) {

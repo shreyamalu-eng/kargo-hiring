@@ -25,6 +25,8 @@ export async function generateJson<T>(prompt: string, schema: object, opts: { de
   const deadline = opts.deadline ?? Date.now() + 50_000;
   let attempt = 0;
   for (;;) {
+    const left = deadline - Date.now();
+    if (left < 4_000) throw new Error("RATE_LIMITED: ran out of time for this request - it will be retried");
     try {
       const res = await client().models.generateContent({
         model: MODEL(),
@@ -33,6 +35,8 @@ export async function generateJson<T>(prompt: string, schema: object, opts: { de
           responseMimeType: "application/json",
           responseSchema: schema,
           temperature: opts.temperature ?? 0,
+          // Never let one AI call run past the serverless time limit.
+          abortSignal: AbortSignal.timeout(left),
         },
       });
       const text = res.text ?? "";
@@ -44,7 +48,7 @@ export async function generateJson<T>(prompt: string, schema: object, opts: { de
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       const status = (e as { status?: number })?.status;
-      const retryable = status === 429 || status === 500 || status === 503 || /429|RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded|non-JSON/i.test(msg);
+      const retryable = status === 429 || status === 500 || status === 503 || /429|RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded|non-JSON|abort|timeout|timed out/i.test(msg);
       if (status === 404 || /not found/i.test(msg))
         throw new Error(`Gemini model "${MODEL()}" not available for this key - set GEMINI_MODEL to a current Flash model. (${msg.slice(0, 160)})`);
       const hinted = Number(msg.match(/retry in ([\d.]+)s/i)?.[1] ?? msg.match(/"retryDelay":\s*"(\d+)s"/)?.[1] ?? 0) * 1000;
