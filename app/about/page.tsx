@@ -2,13 +2,15 @@ import Link from "next/link";
 import Shell from "../ui/Shell";
 import { I } from "../ui/icons";
 import { RUBRIC_ROWS } from "@/lib/schema";
+import { getRoles, getRubric } from "@/lib/db";
 
 export const metadata = { title: "How it works · Kargo Hiring" };
+export const dynamic = "force-dynamic";
 
 const steps = [
   { t: "You add CVs", d: "Pick the role, drop the files.", icon: <I.Upload size={20} />, c: ["var(--accent-soft)", "var(--accent)"] },
   { t: "Contact details removed", d: "Name, email, phone and links are split off and never sent to the AI.", icon: <I.Lock size={20} />, c: ["var(--grey-soft)", "var(--ink-2)"] },
-  { t: "Scored on both rubrics", d: "Every CV gets a 0–5 score and a reason on each criterion, for PM and Senior PM.", icon: <I.Target size={20} />, c: ["var(--blue-soft)", "var(--blue)"] },
+  { t: "Scored on both rubrics", d: "Every CV gets a 0–5 score and a reason on each criterion, for every open role.", icon: <I.Target size={20} />, c: ["var(--blue-soft)", "var(--blue)"] },
   { t: "Brief + draft reply", d: "Top 5 get an interview brief and invite. Everyone else gets a kind decline.", icon: <I.Sparkle size={20} />, c: ["var(--green-soft)", "var(--green)"] },
   { t: "You decide and send", d: "Nothing leaves without your click. Your name goes back in only at send time.", icon: <I.Send size={20} />, c: ["var(--amber-soft)", "var(--amber)"] },
 ];
@@ -21,11 +23,9 @@ const sources: Record<string, string> = {
   makes_the_call: "Lavanya's engineering lead: \"made calls we trusted immediately. She doesn't hedge.\"",
 };
 
-export default function About() {
-  const roles = [
-    { r: "PM", t: "Product Manager" },
-    { r: "SPM", t: "Senior Product Manager" },
-  ] as const;
+export default async function About() {
+  const [dbRoles, rubric] = await Promise.all([getRoles(), getRubric()]).catch(() => [[], RUBRIC_ROWS] as const);
+  const roles = dbRoles.length ? dbRoles.map((r) => ({ r: r.key, t: r.title })) : [{ r: "PM", t: "Product Manager" }, { r: "SPM", t: "Senior Product Manager" }];
   return (
     <Shell active="about">
       <div className="stack" style={{ gap: 22, maxWidth: 1080 }}>
@@ -67,14 +67,14 @@ export default function About() {
         <section className="stack">
           <div>
             <h2 className="h2">The rubric</h2>
-            <p className="muted small" style={{ margin: "4px 0 0" }}>Built from what your best hires had in common, not from the job descriptions. Senior PM uses the same criteria with a higher bar on independence.</p>
+            <p className="muted small" style={{ margin: "4px 0 0" }}>Built from what your best hires had in common, not from the job descriptions. Each open role applies the same proven patterns at its own level. Edit them on the Roles page.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
             {roles.map(({ r, t }) => (
               <div className="card stack" key={r} style={{ gap: 14 }}>
-                <div className="row"><span className={`chip ${r === "PM" ? "accent" : "blue"}`}>{r === "PM" ? <I.Users size={13} /> : <I.Star size={13} />} {t}</span></div>
+                <div className="row"><span className="chip accent"><I.Target size={13} /> {t}</span></div>
                 <div className="weights">
-                  {RUBRIC_ROWS.filter((x) => x.role === r).map((x) => (
+                  {rubric.filter((x) => x.role === r).map((x) => (
                     <div className="weight-row" key={x.key}>
                       <b style={{ fontWeight: 600 }}>{x.name}</b><span className="num small muted" style={{ textAlign: "right" }}>{x.weight}%</span>
                       <div className="bar"><i style={{ width: `${x.weight * 2.5}%` }} /></div>
@@ -85,7 +85,7 @@ export default function About() {
             ))}
           </div>
           <div className="card stack" style={{ gap: 10 }}>
-            <h3 className="h3">Where each criterion came from</h3>
+            <h3 className="h3">Where the core criteria came from</h3>
             {RUBRIC_ROWS.filter((x) => x.role === "PM").map((x) => (
               <div key={x.key} className="qa" style={{ padding: "12px 14px" }}>
                 <b style={{ fontWeight: 600 }}>{x.name}</b>
