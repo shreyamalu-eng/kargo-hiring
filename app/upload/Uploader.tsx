@@ -48,6 +48,10 @@ export default function Uploader({ initialRole }: { initialRole: Role | null }) 
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const json = await res.json().catch(() => ({ error: `Error ${res.status}` }));
         if (res.ok) return set(i, { state: "done", note: `Scored ${Math.round(role === "PM" ? json.pm : json.spm)}` });
+        if (String(json.error ?? "").startsWith("DAILY_LIMIT")) {
+          setWaitNote(String(json.error).replace("DAILY_LIMIT: ", ""));
+          return set(i, { state: "error", note: "Not scored yet: the AI's daily limit is used up" });
+        }
         if (res.status === 429 || json.rateLimited) {
           setWaitNote("The AI is at its free-tier limit. Pausing 30 seconds, then carrying on by itself.");
           set(i, { note: "Waiting for the AI…" });
