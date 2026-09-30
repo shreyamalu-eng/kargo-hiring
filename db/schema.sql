@@ -2,10 +2,23 @@
 -- Rubric rows come from rubric.txt (db/seed.sql).
 
 
+-- Open roles. Add, edit or archive them from the Roles page in the app.
+create table if not exists roles (
+  key            text primary key,
+  title          text not null,
+  tagline        text not null default '',
+  requirements   text not null default '',
+  interview_note text not null default '',
+  shortlist_size integer not null default 5 check (shortlist_size between 1 and 50),
+  sort_order     integer not null default 0,
+  archived       boolean not null default false,
+  created_at     timestamptz not null default now()
+);
+
 -- The standard every candidate is scored against. One row per criterion per role.
 create table if not exists rubric_criteria (
   id          uuid primary key default gen_random_uuid(),
-  role        text not null check (role in ('PM','SPM')),
+  role        text not null,          -- roles.key
   key         text not null,
   name        text not null,
   description text not null,
@@ -17,7 +30,7 @@ create table if not exists rubric_criteria (
 create table if not exists candidates (
   id               uuid primary key default gen_random_uuid(),
   created_at       timestamptz not null default now(),
-  applied_role     text not null check (applied_role in ('PM','SPM')),
+  applied_role     text not null,   -- roles.key
   file_name        text not null,
 
   -- Personal details: stored here only, never sent to any AI call.
@@ -51,3 +64,7 @@ create table if not exists candidates (
 create index if not exists candidates_role_pm  on candidates (applied_role, pm_score desc);
 create index if not exists candidates_role_spm on candidates (applied_role, spm_score desc);
 
+
+-- Databases created before roles were editable had PM/SPM hard-coded; lift that limit.
+alter table rubric_criteria drop constraint if exists rubric_criteria_role_check;
+alter table candidates drop constraint if exists candidates_applied_role_check;
