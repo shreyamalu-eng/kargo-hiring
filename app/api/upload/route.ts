@@ -9,7 +9,7 @@ export const maxDuration = 60;
 
 // One CV per request: extract -> split personal details -> score against both rubrics.
 export async function POST(req: Request) {
-  const deadline = Date.now() + 52_000;
+  const deadline = Date.now() + 50_000;
   const form = await req.formData();
   const file = form.get("file");
   const role = String(form.get("role") ?? "") as Role;
