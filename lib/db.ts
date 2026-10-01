@@ -82,10 +82,10 @@ async function ensureSchema() {
   return w;
 }
 
-const JSON_COLS = new Set(["personal_details", "scores"]);
+const JSON_COLS = new Set(["personal_details", "scores", "interview_questions"]);
 const COLS = new Set([
   "applied_role", "file_name", "personal_details", "cv_text", "status", "error", "scores", "pm_score", "spm_score",
-  "headline", "brief", "draft_type", "draft_locked", "draft_subject", "draft_body", "email_status", "email_error",
+  "headline", "brief", "interview_questions", "draft_type", "draft_locked", "draft_subject", "draft_body", "email_status", "email_error",
   "sent_at", "sent_to", "resend_id",
 ]);
 

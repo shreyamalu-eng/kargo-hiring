@@ -3,7 +3,7 @@ import { Type } from "@google/genai";
 import { redactSecrets, findCandidateByFile, getCandidate, getRubric, getRole, getRoles, insertCandidate, listCandidates, updateCandidate } from "./db";
 import { extractText, splitPersonalDetails } from "./extract";
 import { generateJson } from "./gemini";
-import { criteriaSig, roleScore, type Candidate, type Criterion, type Role, type RoleDef, type RoleScore } from "./types";
+import { criteriaSig, roleScore, type Candidate, type Criterion, type InterviewQuestion, type Role, type RoleDef, type RoleScore } from "./types";
 
 // ---------------------------------------------------------------------------
 // 1. Ingest: file -> personal details (stored, never sent to AI) + redacted CV text
@@ -31,6 +31,7 @@ export async function ingest(file: File, role: Role): Promise<Candidate> {
     spm_score: null,
     headline: null,
     brief: null,
+    interview_questions: null,
     draft_type: null,
     draft_locked: false,
     draft_subject: null,
@@ -164,15 +165,29 @@ function scoreSummary(c: Candidate, role: Role) {
   return s.criteria.map((x) => `- ${x.name} (${x.weight}%): ${x.score}/5 - ${x.reason}`).join("\n") + `\nTotal: ${s.total}/100`;
 }
 
-export async function generateBrief(c: Candidate, rank: number, deadline?: number): Promise<string> {
+export type BriefPack = { brief: string; questions: InterviewQuestion[] };
+
+/** One AI call writes the 3-sentence brief and the tailored interview questions together. */
+export async function generateBrief(c: Candidate, rank: number, deadline?: number): Promise<BriefPack> {
   const role = c.applied_role;
   const def = await getRole(role);
-  const prompt = `Write a 3-sentence interview brief for Arjun, Kargo's founder, who will interview this candidate for the
-${def?.title ?? role} role. Exactly three sentences, plain text, no bullet points, no names (say "the candidate"):
-1) who they are - their background in one line;
-2) why the system ranked them #${rank} for ${role} - name the rubric criteria that drove it, with the CV evidence;
-3) what Arjun should probe in the interview - the weakest or least-evidenced criterion, as a concrete question to ask.
+  const prompt = `You are preparing Arjun, Kargo's founder, to interview this candidate for the ${def?.title ?? role} role.
+Never use names (say "the candidate").
 
+A) "brief": exactly three sentences, plain text:
+1) who they are - their background in one line;
+2) why the system ranked them #${rank} - name the rubric criteria that drove it, with the CV evidence;
+3) what to probe - the weakest or least-evidenced criterion.
+
+B) "questions": 6 interview questions written for THIS candidate, each tied to a rubric criterion:
+- 3 of kind "probe": the weakest or least-evidenced criteria. Ask for a specific past situation, not a hypothetical.
+- 2 of kind "verify": the strongest CV claims. Ask for the concrete detail that only someone who did it would know
+  (numbers, who used it, what broke, what they changed).
+- 1 of kind "role": the most important requirement of the role that the CV says little about.
+Each question: one or two sentences, refers to something specific in the CV, plain conversational English.
+"listen_for": one short sentence on what a strong answer contains (or a red flag).
+"criterion": the exact rubric criterion name it tests (for "role", use "Role fit").
+${def?.requirements ? `\nRole requirements:\n${def.requirements.slice(0, 2000)}\n` : ""}
 Rubric scores:
 ${scoreSummary(c, role)}
 
@@ -180,12 +195,37 @@ CV (redacted):
 """
 ${(c.cv_text ?? "").slice(0, 12000)}
 """`;
-  const out = await generateJson<{ brief: string }>(
+  const out = await generateJson<BriefPack>(
     prompt,
-    { type: Type.OBJECT, properties: { brief: { type: Type.STRING } }, required: ["brief"] },
-    { deadline, temperature: 0.3 }
+    {
+      type: Type.OBJECT,
+      properties: {
+        brief: { type: Type.STRING },
+        questions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              kind: { type: Type.STRING, enum: ["probe", "verify", "role"] },
+              criterion: { type: Type.STRING },
+              question: { type: Type.STRING },
+              listen_for: { type: Type.STRING },
+            },
+            required: ["kind", "criterion", "question", "listen_for"],
+          },
+        },
+      },
+      required: ["brief", "questions"],
+    },
+    { deadline, temperature: 0.4 }
   );
-  return out.brief.trim();
+  const order = { probe: 0, verify: 1, role: 2 } as const;
+  const questions = (out.questions ?? [])
+    .filter((q) => q?.question?.trim())
+    .slice(0, 8)
+    .map((q) => ({ kind: (["probe", "verify", "role"].includes(q.kind) ? q.kind : "probe") as InterviewQuestion["kind"], criterion: (q.criterion ?? "").trim(), question: q.question.trim(), listen_for: (q.listen_for ?? "").trim() }))
+    .sort((x, y) => order[x.kind] - order[y.kind]);
+  return { brief: out.brief.trim(), questions };
 }
 
 export async function generateEmail(c: Candidate, type: "invite" | "rejection", deadline?: number) {
@@ -249,7 +289,7 @@ export function pendingWork(all: Candidate[], role: Role, n = 5) {
     if (c.email_status === "sent") return;
     const recommended = i < n ? "invite" : "rejection";
     const wanted = c.draft_locked && c.draft_type ? c.draft_type : recommended;
-    const needBrief = wanted === "invite" && !c.brief;
+    const needBrief = wanted === "invite" && (!c.brief || !c.interview_questions?.length);
     const draftType = c.draft_type !== wanted || !c.draft_body ? wanted : null;
     if (needBrief || draftType) work.push({ c, rank: i + 1, needBrief, draftType });
   });
@@ -267,7 +307,7 @@ export async function refreshDrafts(role: Role, budgetMs = 45_000) {
     if (Date.now() > deadline - 8_000) break;
     try {
       const patch: Partial<Candidate> = {};
-      if (w.needBrief) patch.brief = await generateBrief(w.c, w.rank, deadline);
+      if (w.needBrief) { const b = await generateBrief(w.c, w.rank, deadline); patch.brief = b.brief; patch.interview_questions = b.questions; }
       if (w.draftType) {
         const e = await generateEmail(w.c, w.draftType, deadline);
         Object.assign(patch, { draft_type: w.draftType, draft_subject: e.subject, draft_body: e.body, email_status: "draft" });

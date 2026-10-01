@@ -51,6 +51,7 @@ export type Candidate = {
   spm_score: number | null;
   headline: string | null;
   brief: string | null;
+  interview_questions: InterviewQuestion[] | null; // tailored questions for the interview
   draft_type: "invite" | "rejection" | null;
   draft_locked: boolean;
   draft_subject: string | null;
@@ -69,3 +70,5 @@ export function roleScore(c: Pick<Candidate, "scores">, role: Role): number {
 export function slugify(title: string) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "role";
 }
+
+export type InterviewQuestion = { question: string; criterion: string; listen_for: string; kind: "probe" | "verify" | "role" };
