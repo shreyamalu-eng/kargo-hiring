@@ -292,3 +292,18 @@ button { font: inherit; color: inherit; }
 }
 @keyframes slide { from { transform: translateX(24px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* Test workspace banner */
+.ws-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-md); background: var(--amber-soft); color: var(--ink-2); margin-bottom: 14px; font-size: 14px; }
+.ws-banner .ws-dot { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--surface); color: var(--amber); }
+.main.app .ws-banner { margin-bottom: 10px; }
+.guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; text-align: left; margin: 22px auto 0; max-width: 880px; }
+.guide .g { padding: 14px; border-radius: var(--r-md); background: var(--bg); }
+.guide .g b { display: block; margin-bottom: 4px; }
+.samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.samples .choice { text-align: left; }
+.under pre { white-space: pre-wrap; word-break: break-word; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); padding: 14px; border-radius: var(--r-md); max-height: 360px; overflow: auto; margin: 0; }
+.under summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.under summary::-webkit-details-marker { display: none; }
+.math { display: grid; grid-template-columns: 1fr auto auto auto; gap: 4px 14px; font-size: 14px; align-items: center; }
+.math .tot { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 700; }
