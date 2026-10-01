@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { I } from "../ui/icons";
+import { SAMPLE_SETS } from "@/lib/samples";
 
 type Role = string;
 type RoleOpt = { key: string; title: string; tagline: string };
@@ -17,6 +18,27 @@ export default function Uploader({ initialRole, roles }: { initialRole: Role | n
   const [over, setOver] = useState(false);
   const [waitNote, setWaitNote] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const [loadingSet, setLoadingSet] = useState<string | null>(null);
+
+  // Loads one of the case's sample CV sets from /samples so anyone can test without their own files.
+  async function loadSample(id: string) {
+    const set = SAMPLE_SETS.find((x) => x.id === id);
+    if (!set) return;
+    if (set.role && roles.some((r) => r.key === set.role)) setRole(set.role);
+    setLoadingSet(id);
+    try {
+      const files = await Promise.all(set.files.map(async (f) => {
+        const r = await fetch(`/samples/${encodeURIComponent(f)}`);
+        if (!r.ok) throw new Error(f);
+        return new File([await r.blob()], f, { type: "application/pdf" });
+      }));
+      add(files);
+    } catch {
+      setWaitNote("Couldn't load the sample CVs. Refresh and try again.");
+    } finally {
+      setLoadingSet(null);
+    }
+  }
 
   // Don't lose an upload by closing the tab halfway.
   useEffect(() => {
@@ -131,6 +153,24 @@ export default function Uploader({ initialRole, roles }: { initialRole: Role | n
           <span className="h3">Drop CVs here, or tap to choose</span>
           <span className="small faint">PDF, DOCX or TXT · select as many as you like</span>
         </label>
+      )}
+
+      {phase === "pick" && (
+        <section className="card stack" id="samples" style={{ gap: 12 }}>
+          <div>
+            <h3 className="h3">No CVs at hand? Use the case&apos;s sample CVs</h3>
+            <p className="small muted" style={{ margin: "4px 0 0" }}>Fictional applicants from the Kargo case. They go through exactly the same pipeline as real uploads.</p>
+          </div>
+          <div className="samples">
+            {SAMPLE_SETS.map((x) => (
+              <button key={x.id} className="choice" disabled={!!loadingSet} onClick={() => loadSample(x.id)}>
+                <span className="ic">{loadingSet === x.id ? <span className="spin" /> : <I.File />}</span>
+                <span><div className="h3">{x.label}</div><div className="small muted">{x.files.length} PDFs{x.role ? ` · usually for ${roles.find((r) => r.key === x.role)?.title ?? x.role}` : " · any role"}</div></span>
+              </button>
+            ))}
+          </div>
+          {<p className="small faint" style={{ margin: 0 }}>Picking a PM or Senior PM set also selects that role. You can change it before scoring.</p>}
+        </section>
       )}
 
       {waitNote && <div className="banner"><span className="spin" />{waitNote}</div>}
