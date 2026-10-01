@@ -18,6 +18,22 @@ type Body = {
   email?: string;
 };
 
+/** "Under the hood": the exact redacted text the AI was given for this CV, and which model scored it. */
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  try {
+    const c = await getCandidate(id);
+    const pd = c.personal_details ?? {};
+    return NextResponse.json({
+      cv_text: c.cv_text ?? "",
+      model: process.env.GEMINI_MODEL || "gemini-3.5-flash",
+      withheld: { name: !!pd.name, email: !!pd.email, phone: !!pd.phone, links: Array.isArray(pd.links) ? pd.links.length : 0 },
+    });
+  } catch (e) {
+    return NextResponse.json({ error: redactSecrets(e instanceof Error ? e.message : String(e)) }, { status: 404 });
+  }
+}
+
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const b = (await req.json().catch(() => ({}))) as Body;
