@@ -44,6 +44,10 @@ export default function Inbox(p: Props) {
   const [mode, setMode] = useState<"desktop" | "phone" | null>(null); // unknown until the first client render
   const isDesktop = mode === "desktop";
   const [filter, setFilter] = useState<"todo" | "sent" | "all">("todo");
+  // Reading view (default on desktop): hides the overview so the review gets most of the screen.
+  const [reading, setReading] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("kh_reading") === "0") setReading(false); } catch { /* storage unavailable */ } }, []);
+  const toggleReading = () => setReading((r) => { try { localStorage.setItem("kh_reading", r ? "0" : "1"); } catch { /* ignore */ } return !r; });
   const [q, setQ] = useState("");
   const [toast, setToast] = useState<{ text: string; err?: boolean } | null>(null);
   const [gen, setGen] = useState<{ running: boolean; left: number; note?: string }>({ running: false, left: p.pendingDrafts });
@@ -266,7 +270,7 @@ export default function Inbox(p: Props) {
   };
 
   return (
-    <div className="home">
+    <div className={`home ${reading && isDesktop ? "reading" : ""}`}>
       <div className="role-switch mobile-only" role="tablist" aria-label="Open roles">
         {p.roles.map((r) => (
           <Link key={r.key} href={`/?role=${encodeURIComponent(r.key)}`} className={`chip ${r.key === p.role ? "accent" : ""}`} role="tab" aria-selected={r.key === p.role}>
@@ -281,6 +285,12 @@ export default function Inbox(p: Props) {
           <h1 className="h1" suppressHydrationWarning>{greeting()}, Arjun</h1>
         </div>
         <span className="spacer" />
+        {isDesktop && reading && <span className="chip reading-only num">{sentCount}/{p.cards.length} replied · {Math.min(p.shortlist, p.cards.length)} shortlisted</span>}
+        {isDesktop && (
+          <button className="btn sm quiet" onClick={toggleReading} title={reading ? "Show the summary and progress" : "Hide the summary so the review gets more room"}>
+            {reading ? <><I.ChevronDown size={14} /> Show overview</> : <><I.Eye size={14} /> Focus on reviews</>}
+          </button>
+        )}
         <Link href={`/roles/${encodeURIComponent(p.role)}`} className="btn sm quiet"><I.Edit size={14} /> Edit role &amp; criteria</Link>
         <Link href={`/upload?role=${encodeURIComponent(p.role)}`} className="btn sm"><I.Plus size={14} /> Add CVs</Link>
       </div>
@@ -307,7 +317,7 @@ export default function Inbox(p: Props) {
       </section>
 
       {p.testRecipient && (
-        <div className="banner small"><I.Mail size={16} /><span><b>Test mode</b> · emails go to {p.testRecipient}</span></div>
+        <div className="banner small hide-reading"><I.Mail size={16} /><span><b>Test mode</b> · emails go to {p.testRecipient}</span></div>
       )}
       {(p.stale > 0 || back.running || back.note) && (
         <div className={`banner ${back.note && !back.running ? "err" : ""}`}>
@@ -348,7 +358,7 @@ export default function Inbox(p: Props) {
               </>
             )}
             {top.length > 0 && (
-              <div className="section-head"><span className="chip green"><I.Star size={12} /> Shortlist</span><span className="small faint">Top {p.shortlist} · recommended for interview</span>
+              <div className="section-head"><span className="chip green"><I.Star size={12} /> Shortlist</span><span className="small faint hide-reading">Top {p.shortlist} · recommended for interview</span>
                 <span className="spacer" />
                 {batchable.length > 1 && p.resendReady && !batch.open && (
                   <button className="btn sm green" onClick={() => setBatch({ open: true, running: false, done: 0, failed: [] })}><I.Send size={13} /> Invite all {batchable.length}</button>
@@ -370,7 +380,7 @@ export default function Inbox(p: Props) {
             )}
             {top.map((c) => <Row key={c.id} c={c} />)}
             {rest.length > 0 && (
-              <div className="section-head"><span className="chip amber">Below the line</span><span className="small faint">Recommended decline · skim once</span></div>
+              <div className="section-head"><span className="chip amber">Below the line</span><span className="small faint hide-reading">Recommended decline · skim once</span></div>
             )}
             {rest.map((c) => <Row key={c.id} c={c} />)}
             {filter !== "sent" && !needle && <Fits fits={p.fits} role={p.role} roleTitle={p.roleTitle} onDone={(t, e) => { notify(t, e); router.refresh(); }} />}
@@ -394,6 +404,7 @@ export default function Inbox(p: Props) {
               rubric={p.rubric}
               resendReady={p.resendReady}
               isDesktop={isDesktop}
+              wide={isDesktop && reading}
               onBack={() => (isDesktop ? null : history.back())}
               onPrev={() => { const i = p.cards.findIndex((x) => x.id === current.id); if (i > 0) select(p.cards[i - 1].id, true); }}
               onNext={() => { const i = p.cards.findIndex((x) => x.id === current.id); if (i < p.cards.length - 1) select(p.cards[i + 1].id, true); }}

@@ -9,7 +9,7 @@ import { api, avatarStyle, band, initials, scoreOf, type CardData } from "./Inbo
 
 type Props = {
   c: CardData; role: Role; other: Role | null; otherTitle: string; testRecipient: string | null; total: number; shortlist: number; rubric: Criterion[];
-  resendReady: boolean; isDesktop: boolean;
+  resendReady: boolean; isDesktop: boolean; wide?: boolean;
   onBack: () => void; onPrev: () => void; onNext: () => void;
   onSent: () => void; onChanged: (t: string) => void; onError: (t: string) => void; onRemoved: () => void;
 };
@@ -52,6 +52,13 @@ export default function Detail(p: Props) {
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [seen, setSeen] = useState(c.draft_body);
+  const [copied, setCopied] = useState(false);
+  const qs = c.interview_questions ?? [];
+  const makeQs = () => run("qs", () => api(`/api/candidates/${c.id}`, "PATCH", { action: "questions" }), "Interview questions ready");
+  const copyQs = async () => {
+    const text = qs.map((q, i) => `${i + 1}. ${q.question}${q.listen_for ? `\n   Listen for: ${q.listen_for}` : ""}`).join("\n\n");
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { p.onError("Couldn't copy - select the text instead"); }
+  };
   if (seen !== c.draft_body) { setSeen(c.draft_body); setSubject(c.draft_subject ?? ""); setBody(c.draft_body ?? ""); }
 
   const dirty = subject !== (c.draft_subject ?? "") || body !== (c.draft_body ?? "") || email !== (c.personal_details?.email ?? "") || name !== (c.personal_details?.name ?? "");
@@ -85,7 +92,7 @@ export default function Detail(p: Props) {
   ];
 
   return (
-    <div className="detail">
+    <div className={`detail ${p.wide ? "wide" : ""}`}>
       {/* phone header: back + position + prev/next */}
       <div className="topbar mobile-only">
         <button className="btn icon quiet" onClick={p.onBack} aria-label="Back to list"><I.ArrowLeft size={18} /></button>
@@ -94,6 +101,7 @@ export default function Detail(p: Props) {
         <div className="seg"><button onClick={p.onPrev} aria-label="Previous candidate"><I.ChevronLeft size={16} /></button><button onClick={p.onNext} aria-label="Next candidate"><I.ChevronRight size={16} /></button></div>
       </div>
 
+      <div className="dcol">
       <section className="card">
         <div className="detail-head">
           <span className="avatar lg" style={avatarStyle(s)}>{initials(c.personal_details?.name)}</span>
@@ -129,25 +137,63 @@ export default function Detail(p: Props) {
         </div>
       </div>
 
-      {briefParts.length > 0 && (
+      {(briefParts.length > 0 || qs.length > 0 || !sent) && (
         <section className="card">
-          <div className="row" style={{ marginBottom: 14 }}><I.Sparkle size={18} className="" /><h3 className="h3">Interview brief</h3></div>
-          <div className="brief-list">
-            {briefParts.map((t, i) => (
-              <div className="brief-item" key={i}>
-                <span className="ic" style={briefMeta[i]?.style}>{briefMeta[i]?.icon}</span>
-                <div><div className="label" style={{ marginBottom: 2 }}>{briefMeta[i]?.label}</div><div>{t}</div></div>
+          {briefParts.length > 0 && (
+            <>
+              <div className="row" style={{ marginBottom: 14 }}><I.Sparkle size={18} className="" /><h3 className="h3">Interview brief</h3></div>
+              <div className="brief-list">
+                {briefParts.map((t, i) => (
+                  <div className="brief-item" key={i}>
+                    <span className="ic" style={briefMeta[i]?.style}>{briefMeta[i]?.icon}</span>
+                    <div><div className="label" style={{ marginBottom: 2 }}>{briefMeta[i]?.label}</div><div>{t}</div></div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </>
+          )}
+          <div className="row wrap" style={{ margin: briefParts.length ? "22px 0 12px" : "0 0 12px" }}>
+            <I.Chat size={18} /><h3 className="h3">Questions to ask {first}</h3>
+            <span className="spacer" />
+            {qs.length > 0 && <button className="btn sm ghost" onClick={copyQs}><I.Copy size={14} /> {copied ? "Copied" : "Copy all"}</button>}
+            {qs.length > 0 && <button className="btn sm ghost" disabled={!!busy} onClick={makeQs}><I.Refresh size={14} /> New set</button>}
           </div>
+          {busy === "qs" ? (
+            <div className="email-box row"><span className="spin" /> Writing questions from this CV and the rubric…</div>
+          ) : qs.length > 0 ? (
+            <ol className="qs">
+              {qs.map((q, i) => (
+                <li key={i} className={`q ${q.kind}`}>
+                  <span className="qn num">{i + 1}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="row wrap" style={{ gap: 6, marginBottom: 4 }}>
+                      <span className={`chip small ${q.kind === "probe" ? "amber" : q.kind === "verify" ? "green" : "blue"}`}>{q.kind === "probe" ? "Probe a gap" : q.kind === "verify" ? "Verify a strength" : "Role fit"}</span>
+                      {q.criterion && <span className="small faint">{q.criterion}</span>}
+                    </div>
+                    <div className="qt">{q.question}</div>
+                    {q.listen_for && <div className="small muted" style={{ marginTop: 4 }}><b>Listen for:</b> {q.listen_for}</div>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : above && !c.brief ? (
+            <div className="email-box row faint"><span className="spin" /> Preparing the brief and questions…</div>
+          ) : (
+            <div className="row wrap" style={{ gap: 10 }}>
+              <span className="small muted" style={{ flex: 1, minWidth: 200 }}>Tailored questions are written automatically for the shortlist. You can make a set for anyone.</span>
+              <button className="btn sm" disabled={!!busy} onClick={makeQs}><I.Sparkle size={14} /> Write interview questions</button>
+            </div>
+          )}
         </section>
       )}
+      </div>
 
+      <div className="dcol">
       <section className="card">
         <div className="row" style={{ marginBottom: 16 }}>
           <h3 className="h3">Why they&apos;re ranked #{c.rank}</h3>
           <span className="spacer" />
-          <span className="small faint">Rubric from your best past hires</span>
+          <span className="small faint wide-hide">Rubric from your best past hires</span>
         </div>
         <div className="crit">
           {(sc?.criteria ?? []).map((x) => (
@@ -204,6 +250,8 @@ export default function Detail(p: Props) {
         )}
       </section>
 
+      </div>
+
       {!sent && (
         <div className={`detail-actions ${p.isDesktop ? "dock" : "sticky"}`}>
           {confirming ? (
@@ -254,7 +302,7 @@ function UnderTheHood({ id, sc }: { id: string; sc: NonNullable<CardData["scores
   return (
     <section className="card under">
       <details onToggle={(e) => (e.currentTarget as HTMLDetailsElement).open && load()}>
-        <summary><I.Eye size={18} /> <span className="h3">Under the hood: how this score was made</span><span className="spacer" /><span className="small faint">for checking</span></summary>
+        <summary><I.Eye size={18} /> <span className="h3">Under the hood: how this score was made</span><span className="spacer" /><span className="small faint wide-hide">for checking</span></summary>
         <div className="stack" style={{ gap: 16, marginTop: 14 }}>
           <div>
             <div className="label" style={{ marginBottom: 8 }}>THE MATHS</div>
