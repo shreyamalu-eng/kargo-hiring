@@ -53,6 +53,7 @@ create table if not exists candidates (
   headline         text,          -- one-line anonymised summary of the profile
 
   brief            text,          -- 3-sentence interview brief (shortlisted only)
+  interview_questions jsonb,      -- tailored interview questions [{question, criterion, listen_for, kind}]
   draft_type       text check (draft_type in ('invite','rejection')),
   draft_locked     boolean not null default false,  -- true once the founder overrides or edits
   draft_subject    text,
@@ -80,3 +81,4 @@ alter table candidates add column if not exists workspace text not null default 
 do $$ begin if not exists (select 1 from pg_constraint where conname = 'roles_ws_pkey') then alter table roles drop constraint if exists roles_pkey; alter table roles add constraint roles_ws_pkey primary key (workspace, key); end if; end $$;
 do $$ begin if not exists (select 1 from pg_constraint where conname = 'rubric_ws_role_key') then alter table rubric_criteria drop constraint if exists rubric_criteria_role_key_key; alter table rubric_criteria add constraint rubric_ws_role_key unique (workspace, role, key); end if; end $$;
 create index if not exists candidates_ws on candidates (workspace, applied_role);
+alter table candidates add column if not exists interview_questions jsonb;
