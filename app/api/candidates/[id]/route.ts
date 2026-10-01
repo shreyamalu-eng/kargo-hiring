@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 type Body = {
-  action?: "save" | "switch" | "rescore" | "regenerate" | "move";
+  action?: "save" | "switch" | "rescore" | "regenerate" | "move" | "questions";
   draft_subject?: string;
   draft_body?: string;
   draft_type?: "invite" | "rejection";
@@ -39,7 +39,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const b = (await req.json().catch(() => ({}))) as Body;
   try {
     const c = await getCandidate(id);
-    if (c.email_status === "sent" && b.action !== "save") throw new Error("Already sent - nothing to change");
+    if (c.email_status === "sent" && b.action !== "save" && b.action !== "questions") throw new Error("Already sent - nothing to change");
 
     if (b.action === "move") {
       // Candidate is a stronger fit for the other role: move them. Drafts are regenerated for the new role.
@@ -49,8 +49,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!to) throw new Error("There is no other open role to move this candidate to");
       await updateCandidate(id, {
         applied_role: to,
-        brief: null, draft_type: null, draft_subject: null, draft_body: null, draft_locked: false, email_status: "none",
+        brief: null, interview_questions: null, draft_type: null, draft_subject: null, draft_body: null, draft_locked: false, email_status: "none",
       });
+    } else if (b.action === "questions") {
+      // Interview questions on demand (also for people below the shortlist line), with a fresh brief.
+      const ranked = rankRole(await listCandidates(c.applied_role), c.applied_role);
+      const pack = await generateBrief(c, ranked.findIndex((x) => x.id === id) + 1, Date.now() + 50_000);
+      await updateCandidate(id, { brief: pack.brief, interview_questions: pack.questions });
     } else if (b.action === "rescore") {
       await scoreCandidate(id, Date.now() + 50_000);
     } else if (b.action === "switch" || b.action === "regenerate") {
@@ -58,9 +63,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       const type = b.action === "switch" ? (b.draft_type ?? (c.draft_type === "invite" ? "rejection" : "invite")) : (c.draft_type ?? "rejection");
       const patch: Partial<Candidate> = { draft_locked: b.action === "switch" ? true : c.draft_locked, draft_type: type };
       const deadline = Date.now() + 50_000;
-      if (type === "invite" && !c.brief) {
+      if (type === "invite" && (!c.brief || !c.interview_questions?.length)) {
         const ranked = rankRole(await listCandidates(c.applied_role), c.applied_role);
-        patch.brief = await generateBrief(c, ranked.findIndex((x) => x.id === id) + 1, deadline);
+        const pack = await generateBrief(c, ranked.findIndex((x) => x.id === id) + 1, deadline);
+        patch.brief = pack.brief;
+        patch.interview_questions = pack.questions;
       }
       const e = await generateEmail(c, type, deadline);
       Object.assign(patch, { draft_subject: e.subject, draft_body: e.body, email_status: "draft" });
