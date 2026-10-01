@@ -71,3 +71,7 @@ See `rubric.txt` — 5 criteria derived from what the *Exceeds Expectations* hir
 | Owns the Miss | 20% | 20% |
 | Direct Line to the User | 15% | 10% |
 | Makes the Call | 10% | 30% |
+
+## Testing from scratch (for reviewers)
+
+Open **/fresh** (or click **Start from scratch** in the sidebar). You get a private, empty workspace with the two default roles and the rubric from the 8 past hires; the main workspace is not touched. On **Add CVs** you can load the case's sample CVs (15 PM, 15 Senior PM, 30 mixed) with one click. Every candidate has an **Under the hood** panel showing the exact redacted text the AI read, the per-criterion scores and the weighted maths. **Back to main** (or /fresh?main) returns to the main workspace.
