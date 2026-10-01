@@ -4,7 +4,8 @@
 
 -- Open roles. Add, edit or archive them from the Roles page in the app.
 create table if not exists roles (
-  key            text primary key,
+  workspace      text not null default 'main',  -- each test workspace has its own roles, CVs and results
+  key            text not null,
   title          text not null,
   tagline        text not null default '',
   requirements   text not null default '',
@@ -12,23 +13,26 @@ create table if not exists roles (
   shortlist_size integer not null default 5 check (shortlist_size between 1 and 50),
   sort_order     integer not null default 0,
   archived       boolean not null default false,
-  created_at     timestamptz not null default now()
+  created_at     timestamptz not null default now(),
+  constraint roles_ws_pkey primary key (workspace, key)
 );
 
 -- The standard every candidate is scored against. One row per criterion per role.
 create table if not exists rubric_criteria (
   id          uuid primary key default gen_random_uuid(),
+  workspace   text not null default 'main',
   role        text not null,          -- roles.key
   key         text not null,
   name        text not null,
   description text not null,
   weight      integer not null check (weight between 0 and 100),
   sort_order  integer not null default 0,
-  unique (role, key)
+  constraint rubric_ws_role_key unique (workspace, role, key)
 );
 
 create table if not exists candidates (
   id               uuid primary key default gen_random_uuid(),
+  workspace        text not null default 'main',
   created_at       timestamptz not null default now(),
   applied_role     text not null,   -- roles.key
   file_name        text not null,
@@ -68,3 +72,11 @@ create index if not exists candidates_role_spm on candidates (applied_role, spm_
 -- Databases created before roles were editable had PM/SPM hard-coded; lift that limit.
 alter table rubric_criteria drop constraint if exists rubric_criteria_role_check;
 alter table candidates drop constraint if exists candidates_applied_role_check;
+
+-- Databases created before workspaces existed: add the column and widen the keys. Existing data stays in 'main'.
+alter table roles add column if not exists workspace text not null default 'main';
+alter table rubric_criteria add column if not exists workspace text not null default 'main';
+alter table candidates add column if not exists workspace text not null default 'main';
+do $$ begin if not exists (select 1 from pg_constraint where conname = 'roles_ws_pkey') then alter table roles drop constraint if exists roles_pkey; alter table roles add constraint roles_ws_pkey primary key (workspace, key); end if; end $$;
+do $$ begin if not exists (select 1 from pg_constraint where conname = 'rubric_ws_role_key') then alter table rubric_criteria drop constraint if exists rubric_criteria_role_key_key; alter table rubric_criteria add constraint rubric_ws_role_key unique (workspace, role, key); end if; end $$;
+create index if not exists candidates_ws on candidates (workspace, applied_role);
