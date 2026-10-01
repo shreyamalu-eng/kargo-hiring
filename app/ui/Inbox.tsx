@@ -218,7 +218,16 @@ export default function Inbox(p: Props) {
         <p className="muted" style={{ maxWidth: 420, margin: "8px auto 20px" }}>
           Add CVs and each one is read, scored against the rubric built from your best hires, and ranked. Your shortlist is ready in a few minutes.
         </p>
-        <Link href={`/upload?role=${encodeURIComponent(p.role)}`} className="btn primary lg"><I.Plus size={18} /> Add CVs for this role</Link>
+        <div className="row wrap" style={{ justifyContent: "center" }}>
+          <Link href={`/upload?role=${encodeURIComponent(p.role)}`} className="btn primary lg"><I.Plus size={18} /> Add CVs for this role</Link>
+          <Link href={`/upload?role=${encodeURIComponent(p.role)}#samples`} className="btn quiet lg"><I.File size={18} /> Use the case&apos;s sample CVs</Link>
+        </div>
+        <div className="guide">
+          <div className="g"><b>1 · Check the role</b><span className="small muted">Requirements and the scoring criteria (from the 8 past hires) are on <Link href={`/roles/${encodeURIComponent(p.role)}`}>Edit role &amp; criteria</Link>.</span></div>
+          <div className="g"><b>2 · Add CVs</b><span className="small muted">Contact details are split off first. Only the redacted text goes to the AI.</span></div>
+          <div className="g"><b>3 · Review the ranking</b><span className="small muted">Each CV gets 0–5 per criterion with a reason. Open &ldquo;Under the hood&rdquo; to see the exact text and maths.</span></div>
+          <div className="g"><b>4 · Decide and send</b><span className="small muted">Top {p.shortlist} get a brief and an invite draft, the rest a kind decline. Nothing sends without a click.</span></div>
+        </div>
         {p.fits.length > 0 && (
           <div className="stack" style={{ gap: 6, textAlign: "left", maxWidth: 640, margin: "28px auto 0" }}>
             <Fits fits={p.fits} role={p.role} roleTitle={p.roleTitle} onDone={(t, e) => { notify(t, e); router.refresh(); }} />

@@ -34,5 +34,7 @@ export const I = {
   User: ({ size, className }: P) => (<svg {...base(size)} className={className}><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></svg>),
   Swap: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M7 4 3.5 7.5 7 11M3.5 7.5h13M17 13l3.5 3.5L17 20M20.5 16.5h-13" /></svg>),
   Trash: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.8 12.5a1.5 1.5 0 0 0 1.5 1.5h6.4a1.5 1.5 0 0 0 1.5-1.5L17.5 7" /></svg>),
+  Eye: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" /></svg>),
+  Flask: ({ size, className }: P) => (<svg {...base(size)} className={className}><path d="M9.5 3.5h5M10 3.5v6L4.8 18.2A1.5 1.5 0 0 0 6.1 20.5h11.8a1.5 1.5 0 0 0 1.3-2.3L14 9.5v-6M7.5 14.5h9" /></svg>),
   Logo: ({ size, className }: P) => (<svg {...base(size)} className={className} strokeWidth={2.2}><path d="M6 4v16M18 4l-8.5 8L18 20" /></svg>),
 };

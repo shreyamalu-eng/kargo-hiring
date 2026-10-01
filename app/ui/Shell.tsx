@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { getRoles, listCandidates } from "@/lib/db";
 import type { RoleDef } from "@/lib/types";
+import { MAIN, workspace } from "@/lib/workspace";
 import { I } from "./icons";
 
 type Props = { app?: boolean; active: string; children: React.ReactNode; hideTopbar?: boolean };
 
 /** App frame: sidebar on desktop, tab bar on phone. Loads the open roles itself so every page shows them. */
 export default async function Shell({ app, active, children, hideTopbar }: Props) {
+  const ws = await workspace();
+  const test = ws !== MAIN;
   let roles: RoleDef[] = [];
   const waiting: Record<string, number> = {};
   try {
@@ -38,6 +41,9 @@ export default async function Shell({ app, active, children, hideTopbar }: Props
         <Link href="/upload" className={`nav ${active === "upload" ? "on" : ""}`}><I.Upload /> Add CVs</Link>
         <Link href="/roles" className={`nav ${active === "roles" ? "on" : ""}`}><I.Target /> Roles &amp; criteria</Link>
         <Link href="/about" className={`nav ${active === "about" ? "on" : ""}`}><I.Shield /> How it works</Link>
+        <div className="label nav-label">TRY IT</div>
+        <a href="/fresh" className="nav" title="Opens an empty workspace with the default roles. Nothing here is changed."><I.Flask /> {test ? "Start over" : "Start from scratch"}</a>
+        {test && <a href="/fresh?main" className="nav"><I.ArrowRight /> Back to main</a>}
         <div className="side-foot">
           <a href="/api/export" className="nav"><I.Download /> Export decisions</a>
         </div>
@@ -51,6 +57,15 @@ export default async function Shell({ app, active, children, hideTopbar }: Props
             <a href="/api/export" className="btn icon quiet" aria-label="Export decisions"><I.Download size={18} /></a>
           </div>
         )}
+        {test && (
+          <div className="ws-banner" role="note">
+            <span className="ws-dot"><I.Flask size={16} /></span>
+            <span><b>Test workspace</b> · starts empty, separate from the main data. Emails go to the test inbox only.</span>
+            <span className="spacer" />
+            <a href="/fresh" className="btn sm quiet">Start over</a>
+            <a href="/fresh?main" className="btn sm ghost">Exit</a>
+          </div>
+        )}
         {children}
       </main>
 
@@ -60,7 +75,7 @@ export default async function Shell({ app, active, children, hideTopbar }: Props
         <Link href="/roles" className={`tab ${active === "roles" ? "on" : ""}`}><I.Target size={22} />Roles</Link>
         <Link href="/upload" className="fab" aria-label="Add CVs"><I.Plus size={26} /></Link>
         <Link href="/about" className={`tab ${active === "about" ? "on" : ""}`}><I.Shield size={22} />How it works</Link>
-        <Link href="/roles/new" className="tab"><I.Star size={22} />New role</Link>
+        <a href="/fresh" className="tab"><I.Flask size={22} />{test ? "Start over" : "Fresh start"}</a>
       </nav>
     </div>
   );

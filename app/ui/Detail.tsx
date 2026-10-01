@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+
+type Under = { cv_text: string; model: string; withheld: { name: boolean; email: boolean; phone: boolean; links: number } };
 import type { Criterion, Role } from "@/lib/types";
 import { I } from "./icons";
 import { api, avatarStyle, band, initials, scoreOf, type CardData } from "./Inbox";
@@ -160,6 +162,8 @@ export default function Detail(p: Props) {
         </div>
       </section>
 
+      {sc && <UnderTheHood id={c.id} sc={sc} />}
+
       <section className="card">
         <div className="row wrap" style={{ marginBottom: 14 }}>
           <h3 className="h3">Email to {firstFromName}</h3>
@@ -230,5 +234,54 @@ export default function Detail(p: Props) {
         ) : <button className="btn sm ghost" onClick={() => setRemoving(true)}><I.Trash size={14} /> Remove</button>)}
       </div>
     </div>
+  );
+}
+
+/** Shows how the score was produced: the weighted maths, and the exact redacted text the AI read. */
+function UnderTheHood({ id, sc }: { id: string; sc: NonNullable<CardData["scores"]>[string] }) {
+  const [data, setData] = useState<Under | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const wSum = sc.criteria.reduce((a, x) => a + x.weight, 0) || 100;
+  const load = async () => {
+    if (data || err) return;
+    try {
+      const r = await fetch(`/api/candidates/${id}`);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      setData(j);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't load"); }
+  };
+  return (
+    <section className="card under">
+      <details onToggle={(e) => (e.currentTarget as HTMLDetailsElement).open && load()}>
+        <summary><I.Eye size={18} /> <span className="h3">Under the hood: how this score was made</span><span className="spacer" /><span className="small faint">for checking</span></summary>
+        <div className="stack" style={{ gap: 16, marginTop: 14 }}>
+          <div>
+            <div className="label" style={{ marginBottom: 8 }}>THE MATHS</div>
+            <div className="math">
+              <span className="small faint">Criterion</span><span className="small faint">Score</span><span className="small faint">Weight</span><span className="small faint" style={{ textAlign: "right" }}>Points</span>
+              {sc.criteria.map((x) => (
+                <Fragment key={x.key}><span>{x.name}</span><span className="num">{x.score}/5</span><span className="num">{x.weight}%</span><span className="num" style={{ textAlign: "right" }}>{((x.score / 5) * x.weight).toFixed(1)}</span></Fragment>
+              ))}
+              <span className="tot">Total {wSum !== 100 ? `(scaled to 100 from ${wSum})` : ""}</span><span className="tot" /><span className="tot num">{wSum}%</span><span className="tot num" style={{ textAlign: "right" }}>{Math.round(sc.total)}/100</span>
+            </div>
+            <p className="small muted" style={{ margin: "8px 0 0" }}>Points = score ÷ 5 × weight. The AI gives only the 0–5 score and the reason for each criterion; the app does the adding, so the total can always be checked by hand.</p>
+          </div>
+          <div>
+            <div className="label" style={{ marginBottom: 8 }}>WHAT THE AI READ</div>
+            {err ? <p className="small" style={{ color: "var(--rose)" }}>{err}</p> : !data ? <p className="small muted"><span className="spin" /> Loading…</p> : (
+              <>
+                <div className="row wrap" style={{ gap: 6, marginBottom: 8 }}>
+                  <span className="chip"><I.Lock size={12} /> Kept back: {[data.withheld.name && "name", data.withheld.email && "email", data.withheld.phone && "phone", data.withheld.links && `${data.withheld.links} link${data.withheld.links > 1 ? "s" : ""}`].filter(Boolean).join(", ") || "nothing found"}</span>
+                  <span className="chip">Model: {data.model}</span>
+                </div>
+                <pre>{data.cv_text || "(no text)"}</pre>
+                <p className="small muted" style={{ margin: "8px 0 0" }}>This is the only CV text sent to the AI. [CANDIDATE], [EMAIL], [PHONE] and [LINK] mark what was removed on our server first.</p>
+              </>
+            )}
+          </div>
+        </div>
+      </details>
+    </section>
   );
 }
